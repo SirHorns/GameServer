@@ -1,4 +1,5 @@
 ﻿using GameServerCore;
+using System;
 
 namespace LeagueSandbox.GameServer.Chatbox.Commands
 {
@@ -27,6 +28,11 @@ namespace LeagueSandbox.GameServer.Chatbox.Commands
 
             if (float.TryParse(split[1], out var xp))
             {
+                Console.WriteLine(xp);
+                if(xp > 18360)
+                {
+                    xp = 18360;
+                }
                 _playerManager.GetPeerInfo(userId).Champion.AddExperience(xp);
             }
         }
