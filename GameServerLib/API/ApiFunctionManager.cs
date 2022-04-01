@@ -1065,5 +1065,18 @@ namespace LeagueSandbox.GameServer.API
             //Investigate if we wanna update the stats here too
             _game.PacketNotifier.NotifyS2C_UpdateAttackSpeedCapOverrides(doOverrideMax, maxAttackSpeedOverride, doOverrideMin, minAttackSpeedOverride, unit);
         }
+
+        /// <summary>
+        /// Modifys Unit's shield
+        /// </summary>
+        /// <param name="unit">Unit who's shield is being modified.</param>
+        /// <param name="amount">Shield amount.</param>
+        /// <param name="IsPhysical">Whether or not the shield being modified is of the Physical type.</param>
+        /// <param name="IsMagical">Whether or not the shield being modified is of the Magical type.</param>
+        /// <param name="StopShieldFade">Whether the shield should stay static or fade.</param>
+        public static void ModifyShield(IAttackableUnit unit, float amount, bool IsPhysical, bool IsMagical, bool StopShieldFade)
+        {
+            _game.PacketNotifier.NotifyModifyShield(unit, amount, IsPhysical, IsMagical, StopShieldFade);
+        }
     }
 }

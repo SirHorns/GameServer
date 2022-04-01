@@ -25,6 +25,10 @@ namespace LeagueSandbox.GameServer.Chatbox.Commands
             }
             else if (float.TryParse(split[1], out var gold))
             {
+                if(gold > 100000)
+                {
+                    gold = 100000;
+                }
                 _playerManager.GetPeerInfo(userId).Champion.Stats.Gold += gold;
             }
         }

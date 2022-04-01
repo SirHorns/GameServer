@@ -1579,9 +1579,12 @@ namespace PacketDefinitions420
             var mods = new ModifyShield
             {
                 SenderNetID = unit.NetId,
-                Physical = IsPhysical,
-                Magical = IsMagical,
-                Amount = amount
+                ShieldData = new ShieldData
+                {
+                    Physical = IsPhysical,
+                    Magical = IsMagical,
+                    Amount = amount
+                }
             };
             _packetHandlerManager.BroadcastPacket(mods.GetBytes(), Channel.CHL_S2C);
         }
