@@ -44,38 +44,21 @@ namespace Buffs
         {
             _thisBuff = buff;
             _target = unit;
-            ApiEventManager.OnPreTakeDamage.AddListener(this, unit, OnPreTakeDamage, false);
-            ApiEventManager.OnTakeDamage.AddListener(this, unit, OnTakeDamage, false);
+
             _remainingShield = 0;
             var spellLevel = ownerSpell.CastInfo.SpellLevel - 1;
             var shieldBase = new[] { 80, 120, 160, 200, 240 }[spellLevel];
             var finalShield = shieldBase + (.4f * ownerSpell.CastInfo.Owner.Stats.AbilityPower.Total);
 
-            //ChangeImuneFlags(unit, true);
-
             _remainingShield = finalShield;
-            ModifyShield(unit, 500f, true, true, false);
-        }
 
-        private void OnPreTakeDamage(IDamageData damageData)
-        {
-        }
-
-        private void OnTakeDamage(IDamageData damageData)
-        {
-        }
-
-        private void ChangeImuneFlags(IAttackableUnit unit, bool IsImmune)
-        {
-            SetStatus(unit, StatusFlags.PhysicalImmune, IsImmune);
-            SetStatus(unit, StatusFlags.MagicImmune, IsImmune);
+            StatsModifier.NormalShieldPoints.FlatBonus = 600f;
+            unit.ModifyShield(600f, ShieldType.SHIELD_PHYSICAL, true);
         }
 
         public void OnDeactivate(IAttackableUnit unit, IBuff buff, ISpell ownerSpell)
         {
-            ApiEventManager.OnTakeDamage.RemoveListener(this);
-            //ChangeImuneFlags(unit, false);
-            ModifyShield(unit, - 500, true, true, false);
+            ModifyShield(unit, -1000, true, true, false);
         }
 
         public void OnPreAttack(ISpell spell)

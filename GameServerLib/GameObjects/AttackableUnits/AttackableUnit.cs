@@ -443,6 +443,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             var attackerStats = attacker.Stats;
             float postMitigationDamage = Stats.GetPostMitigationDamage(damage, type, attacker);
 
+
             IDamageData damageData = new DamageData
             {
                 IsAutoAttack = source == DamageSource.DAMAGE_SOURCE_ATTACK,
@@ -548,6 +549,33 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         }
 
         /// <summary>
+        /// Applies a shield to this unit's hp bar (Visual).
+        /// </summary>
+        /// <param name="amount"></param>
+        /// <param name="shieldType"></param>
+        /// <param name="noFade"</param>
+        public virtual void ModifyShield(float amount, ShieldType shieldType, bool noFade)
+        {
+            switch (shieldType)
+            {
+                case ShieldType.SHIELD_NORMAL:
+                    //_game.PacketNotifier.NotifyModifyShield(this, amount, true, true, noFade);
+                    Stats.ShieldType = ShieldType.SHIELD_NORMAL;
+                    break;
+                case ShieldType.SHIELD_PHYSICAL:
+                    _game.PacketNotifier.NotifyModifyShield(this, amount, true, true, noFade);
+                    Stats.ShieldType = ShieldType.SHIELD_PHYSICAL;
+                    break;
+                case ShieldType.SHIELD_MAGICAL:
+                    _game.PacketNotifier.NotifyModifyShield(this, amount, false, true, noFade);
+                    Stats.ShieldType = ShieldType.SHIELD_MAGICAL;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("ApplyShield: shieldType is empty.");
+            }
+        }
+
+        /// <summary>
         /// Applies damage to this unit.
         /// </summary>
         /// <param name="attacker">Unit that is dealing the damage.</param>
@@ -616,11 +644,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(source), source, null);
-            }
-
-            if (!CanTakeDamage(type))
-            {
-                return;
             }
 
             Stats.CurrentHealth = Math.Max(0.0f, Stats.CurrentHealth - postMitigationDamage);
@@ -1371,6 +1394,31 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     }
                     // TODO: Unload and reload all data of buff script here.
                 }
+                else if(ParentBuffs[b.Name].BuffAddType == BuffAddType.STACKS_AND_DECAYS)
+                {
+                    // Don't need the newly added buff instance as we already have a parent who we can add stacks to.
+                    RemoveBuffSlot(b);
+
+                    // Refresh the time of the parent buff and adds a stack if Max Stacks wasn't reached.
+                    ParentBuffs[b.Name].ResetTimeElapsed();
+                    if (ParentBuffs[b.Name].IncrementStackCount())
+                    {
+                        ParentBuffs[b.Name].ActivateBuff();
+                    }
+
+                    if (!b.IsHidden)
+                    {
+                        if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
+                        }
+                        else
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
+                        }
+                    }
+                    // TODO: Unload and reload all data of buff script here.
+                }
             }    
         }
 
@@ -1560,6 +1608,15 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 // If the buff is supposed to be applied alongside other buffs of the same name, and their are more than one already present.
                 else if (b.BuffAddType == BuffAddType.STACKS_AND_OVERLAPS && b.StackCount > 1)
                 {
+
+                    b.DecrementStackCount();
+
+                    if (!b.IsHidden)
+                    {
+                        _game.PacketNotifier.NotifyNPC_BuffUpdateCount(b, b.Duration - b.TimeElapsed, b.TimeElapsed);
+                    }
+
+
                     // Remove one stack and update the other buff instances of the same name
                     b.DecrementStackCount();
 
@@ -1595,6 +1652,30 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                                 _game.PacketNotifier.NotifyNPC_BuffUpdateCountGroup(this, tempbuffs, b.Duration - newestBuff.TimeElapsed, newestBuff.TimeElapsed);
                             }
                         }
+                    }
+                }
+                else if (b.BuffAddType == BuffAddType.STACKS_AND_DECAYS && b.StackCount > 1)
+                {
+                    b.DecrementStackCount();
+
+                    IBuff tempBuff = new Buff(_game, b.Name, b.Duration, b.StackCount - 1, b.OriginSpell, b.TargetUnit, b.SourceUnit, b.IsBuffInfinite());
+
+                    RemoveBuff(b.Name, true);
+
+                    if (!b.IsHidden)
+                    {
+                        _game.PacketNotifier.NotifyNPC_BuffRemove2(b);
+                    }
+
+                    // Next oldest buff takes the place of the removed oldest buff; becomes parent buff.
+                    BuffSlots[b.Slot] = tempBuff;
+                    ParentBuffs.Add(b.Name, tempBuff);
+                    BuffList.Add(tempBuff);
+
+                    // Add the buff to the visual hud.
+                    if (!b.IsHidden)
+                    {
+                        _game.PacketNotifier.NotifyNPC_BuffAdd2(tempBuff, tempBuff.Duration, tempBuff.TimeElapsed);
                     }
                 }
                 // Only other case where RemoveBuff should be called is when there is one stack remaining on the buff.

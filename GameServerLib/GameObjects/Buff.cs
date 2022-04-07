@@ -62,7 +62,7 @@ namespace LeagueSandbox.GameServer.GameObjects
             LoadScript();
 
             BuffAddType = BuffScript.BuffMetaData.BuffAddType;
-            if (BuffAddType == (BuffAddType.STACKS_AND_RENEWS | BuffAddType.STACKS_AND_CONTINUE | BuffAddType.STACKS_AND_OVERLAPS) && BuffScript.BuffMetaData.MaxStacks < 2)
+            if (BuffAddType == (BuffAddType.STACKS_AND_RENEWS | BuffAddType.STACKS_AND_CONTINUE | BuffAddType.STACKS_AND_OVERLAPS | BuffAddType.STACKS_AND_DECAYS) && BuffScript.BuffMetaData.MaxStacks < 2)
             {
                 throw new ArgumentException("Error: Tried to create Stackable Buff, but MaxStacks was less than 2.");
             }

@@ -128,6 +128,14 @@ namespace GameServerCore.Domain.GameObjects
         void TakeDamage(IDamageData damageData, DamageResultType damageText);
         void TakeDamage(IDamageData damageData, bool isCrit);
         /// <summary>
+        /// Applies a shield to this unit.
+        /// </summary>
+        /// <param name="amount"></param>
+        /// <param name="shieldType"></param>
+        /// <param name="noFade"</param>
+        void ModifyShield(float amount, ShieldType shieldType, bool noFade);
+
+        /// <summary>
         /// Whether or not this unit is currently calling for help. Unimplemented.
         /// </summary>
         /// <returns>True/False.</returns>

@@ -6,6 +6,7 @@ namespace GameServerCore.Domain.GameObjects
     {
         ulong SpellsEnabled { get; }
         ulong SummonerSpellsEnabled { get; }
+        ShieldType ShieldType { get; set; }
         ActionState ActionState { get; }
         PrimaryAbilityResourceType ParType { get; }
         bool IsMagicImmune { get; }
@@ -55,7 +56,8 @@ namespace GameServerCore.Domain.GameObjects
         float CurrentMana { get; set; }
         bool IsGeneratingGold { get; set; }
         float SpellCostReduction { get; }
-        
+        float CurrentPhysicalShield { get; }
+
         void AddModifier(IStatsModifier modifier);
         void RemoveModifier(IStatsModifier modifier);
         void LevelUp();
@@ -64,6 +66,7 @@ namespace GameServerCore.Domain.GameObjects
         bool GetActionState(ActionState state);
         bool GetSpellEnabled(byte id);
         float GetPostMitigationDamage(float damage, DamageType type, IAttackableUnit attacker);
+        float GetPostShieldDamage(IAttackableUnit unit, float damage, DamageType type);
         bool GetSummonerSpellEnabled(byte id);
         
         void SetActionState(ActionState state, bool enabled);

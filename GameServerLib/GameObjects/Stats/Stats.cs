@@ -10,6 +10,8 @@ namespace LeagueSandbox.GameServer.GameObjects.Stats
         public ulong SpellsEnabled { get; private set; }
         public ulong SummonerSpellsEnabled { get; private set; }
 
+        public ShieldType ShieldType { get; set; }
+
         public ActionState ActionState { get; private set; }
         public PrimaryAbilityResourceType ParType { get; private set; }
 
@@ -55,7 +57,7 @@ namespace LeagueSandbox.GameServer.GameObjects.Stats
         public IStat SpellVamp { get; }
         public IStat Tenacity { get; }
         public IStat AcquisitionRange { get; set; }
-
+        public IStat PhysicalShieldPoints { get; set; }
         public float Gold { get; set; }
         public byte Level { get; set; }
         public float Experience { get; set; }
@@ -72,6 +74,12 @@ namespace LeagueSandbox.GameServer.GameObjects.Stats
         {
             get => Math.Min(ManaPoints.Total, _currentMana);
             set => _currentMana = value;
+        }
+        private float _currentPhysicalShield;
+        public float CurrentPhysicalShield
+        {
+            get => _currentPhysicalShield;
+            set => _currentPhysicalShield = value;
         }
 
         public bool IsGeneratingGold { get; set; } // Used to determine if the Stats update should include generating gold. Changed in Champion.h
@@ -109,6 +117,7 @@ namespace LeagueSandbox.GameServer.GameObjects.Stats
             SpellVamp = new Stat();
             Tenacity = new Stat();
             AcquisitionRange = new Stat();
+            PhysicalShieldPoints = new Stat();
         }
 
         public void LoadStats(ICharData charData)
@@ -309,6 +318,11 @@ namespace LeagueSandbox.GameServer.GameObjects.Stats
             }
             damage = defense >= 0 ? 100 / (100 + defense) * damage : (2 - 100 / (100 - defense)) * damage;
             return damage;
+        }
+
+        public float GetPostShieldDamage(IAttackableUnit unit, float damage,DamageType damageType)
+        {
+            return 0;
         }
 
         public void SetActionState(ActionState state, bool enabled)
