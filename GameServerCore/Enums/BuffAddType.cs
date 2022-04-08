@@ -29,15 +29,8 @@
         /// </summary>
         STACKS_AND_OVERLAPS,
         /// <summary>
-<<<<<<< Updated upstream
         /// Adds a stack to any buffs of the same name already applied and decays through the stack acount.
         /// </summary>
         STACKS_AND_DECAYS,
-=======
-        /// Adds a stack to any buffs of the same name already applied and continues the timer of the oldest stack, while postponing the timer of newer stacks until the oldest has finished.
-        /// Functionally treated as a single buff with a single timer and stack count.
-        /// </summary>
-        STACKS_AND_DECAY,
->>>>>>> Stashed changes
     }
 }

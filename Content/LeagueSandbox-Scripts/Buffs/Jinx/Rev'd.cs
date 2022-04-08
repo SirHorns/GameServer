@@ -28,11 +28,7 @@ namespace Buffs
         public IBuffScriptMetaData BuffMetaData { get; set; } = new BuffScriptMetaData
         {
             BuffType = BuffType.COMBAT_ENCHANCER,
-<<<<<<< Updated upstream
             BuffAddType = BuffAddType.STACKS_AND_DECAYS,
-=======
-            BuffAddType = BuffAddType.STACKS_AND_DECAY,
->>>>>>> Stashed changes
             MaxStacks = 3
         };
 
@@ -47,11 +43,8 @@ namespace Buffs
             _owner = ownerSpell.CastInfo.Owner;
             _spell = ownerSpell;
 
-<<<<<<< Updated upstream
             StatsModifier.AttackSpeed.PercentBonus = .2f;//CalculateBonusAttackSpeed(_owner.GetSpell(0).CastInfo.SpellLevel);
-=======
-            StatsModifier.AttackSpeed.PercentBaseBonus = .2f;//CalculateBonusAttackSpeed(_owner.GetSpell(0).CastInfo.SpellLevel);
->>>>>>> Stashed changes
+
             _owner.AddStatModifier(StatsModifier);
         }
         public void OnDeactivate(IAttackableUnit unit, IBuff buff, ISpell ownerSpell)
