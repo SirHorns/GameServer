@@ -1394,6 +1394,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     }
                     // TODO: Unload and reload all data of buff script here.
                 }
+<<<<<<< Updated upstream
                 else if(ParentBuffs[b.Name].BuffAddType == BuffAddType.STACKS_AND_DECAYS)
                 {
                     // Don't need the newly added buff instance as we already have a parent who we can add stacks to.
@@ -1409,6 +1410,54 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     if (!b.IsHidden)
                     {
                         if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
+=======
+                else if(ParentBuffs[b.Name].BuffAddType == BuffAddType.STACKS_AND_DECAY)
+                {
+                    // If we've hit the max stacks count for this buff add type
+                    if (ParentBuffs[b.Name].StackCount >= ParentBuffs[b.Name].MaxStacks)
+                    {
+                        ParentBuffs[b.Name].ResetTimeElapsed();
+
+                        GetBuffsWithName(b.Name).ForEach(buff =>
+                        {
+                            buff.SetStacks(ParentBuffs[b.Name].StackCount);
+                            buff.ResetTimeElapsed();
+                        });
+
+                        if (!b.IsHidden)
+                        {
+                            // If the buff is a counter buff (ex: Nasus Q stacks), then use a packet specialized for big buff stack counts (int.MaxValue).
+                            if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
+                            {
+                                _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
+                            }
+                            // Otherwise, use the normal buff stack (254) update (usually just adds one to the number on the icon and refreshes the time of the icon).
+                            else
+                            {
+                                _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
+                            }
+                        }
+
+                        return;
+                    }
+                    
+                    //Add to list and activate
+                    BuffList.Add(b);
+                    b.ActivateBuff();
+
+                    ParentBuffs[b.Name].IncrementStackCount();
+
+                    GetBuffsWithName(b.Name).ForEach(buff =>
+                    {
+                        buff.SetStacks(ParentBuffs[b.Name].StackCount);
+                        buff.ResetTimeElapsed();
+                    });
+
+
+                    if (!b.IsHidden)
+                    {
+                        if (b.BuffType == BuffType.COUNTER)
+>>>>>>> Stashed changes
                         {
                             _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
                         }
@@ -1417,7 +1466,10 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                             _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
                         }
                     }
+<<<<<<< Updated upstream
                     // TODO: Unload and reload all data of buff script here.
+=======
+>>>>>>> Stashed changes
                 }
             }    
         }
@@ -1618,11 +1670,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
 
                     // Remove one stack and update the other buff instances of the same name
-                    b.DecrementStackCount();
+                    ParentBuffs[b.Name].DecrementStackCount();
 
                     // TODO: Unload and reload all data of buff scripts here.
 
-                    RemoveBuff(b.Name, true);
+                    RemoveBuff(b.Name, false);
 
                     var tempbuffs = GetBuffsWithName(b.Name);
 
@@ -1632,9 +1684,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     BuffSlots[b.Slot] = tempbuffs[0];
                     ParentBuffs.Add(b.Name, tempbuffs[0]);
 
-                    // Used in packets to maintain the visual buff icon's timer, as removing a stack from the icon can reset the timer.
-                    var newestBuff = tempbuffs[tempbuffs.Count - 1];
-
                     if (!b.IsHidden)
                     {
                         if (b.BuffType == BuffType.COUNTER)
@@ -1643,22 +1692,24 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                         }
                         else
                         {
-                            if (b.StackCount == 1)
-                            {
-                                _game.PacketNotifier.NotifyNPC_BuffUpdateCount(newestBuff, b.Duration - newestBuff.TimeElapsed, newestBuff.TimeElapsed);
-                            }
-                            else
-                            {
-                                _game.PacketNotifier.NotifyNPC_BuffUpdateCountGroup(this, tempbuffs, b.Duration - newestBuff.TimeElapsed, newestBuff.TimeElapsed);
-                            }
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateCount(b, b.Duration, b.TimeElapsed);
                         }
                     }
                 }
+<<<<<<< Updated upstream
                 else if (b.BuffAddType == BuffAddType.STACKS_AND_DECAYS && b.StackCount > 1)
                 {
                     b.DecrementStackCount();
 
                     IBuff tempBuff = new Buff(_game, b.Name, b.Duration, b.StackCount - 1, b.OriginSpell, b.TargetUnit, b.SourceUnit, b.IsBuffInfinite());
+=======
+                // If the should be removed incramentally stack by stack removing its part of the applied buff.
+                else if (b.BuffAddType == BuffAddType.STACKS_AND_DECAY && b.StackCount > 1)
+                {
+                    b.DecrementStackCount();
+
+                    IBuff tempBuff = new Buff(_game, b.Name, b.Duration, b.StackCount, b.OriginSpell, b.TargetUnit, b.SourceUnit, b.IsBuffInfinite());
+>>>>>>> Stashed changes
 
                     RemoveBuff(b.Name, true);
 
@@ -1677,10 +1728,15 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     {
                         _game.PacketNotifier.NotifyNPC_BuffAdd2(tempBuff, tempBuff.Duration, tempBuff.TimeElapsed);
                     }
+<<<<<<< Updated upstream
+=======
+                    tempBuff.ActivateBuff();
+>>>>>>> Stashed changes
                 }
                 // Only other case where RemoveBuff should be called is when there is one stack remaining on the buff.
                 else
                 {
+                    
                     if (!b.Elapsed())
                     {
                         b.DeactivateBuff();
