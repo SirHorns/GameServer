@@ -1650,7 +1650,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     // Remove one stack and update the other buff instances of the same name
                     ParentBuffs[b.Name].DecrementStackCount();
 
-                    // TODO: Unload and reload all data of buff scripts here.
+                    b.DeactivateBuff();
 
                     RemoveBuff(b.Name, false);
 
@@ -1676,28 +1676,40 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 }
                 else if (b.BuffAddType == BuffAddType.STACKS_AND_DECAYS && b.StackCount > 1)
                 {
-                    b.DecrementStackCount();
+                    b.DeactivateBuff();
 
-                    IBuff tempBuff = new Buff(_game, b.Name, b.Duration, b.StackCount, b.OriginSpell, b.TargetUnit, b.SourceUnit, b.IsBuffInfinite());
-
-                    RemoveBuff(b.Name, true);
+                    ParentBuffs[b.Name].DecrementStackCount();
 
                     if (!b.IsHidden)
                     {
-                        _game.PacketNotifier.NotifyNPC_BuffRemove2(b);
+                        _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
                     }
+
+                    var tempbuffs = GetBuffsWithName(b.Name);
+
+                    tempbuffs.ForEach(buff =>
+                    {
+                        buff.SetStacks(ParentBuffs[b.Name].StackCount);
+                        buff.ResetTimeElapsed();
+                    });
+
+                    RemoveBuff(b.Name, false);
 
                     // Next oldest buff takes the place of the removed oldest buff; becomes parent buff.
-                    BuffSlots[b.Slot] = tempBuff;
-                    ParentBuffs.Add(b.Name, tempBuff);
-                    BuffList.Add(tempBuff);
+                    BuffSlots[b.Slot] = tempbuffs[0];
+                    ParentBuffs.Add(b.Name, tempbuffs[0]);
 
-                    // Add the buff to the visual hud.
                     if (!b.IsHidden)
                     {
-                        _game.PacketNotifier.NotifyNPC_BuffAdd2(tempBuff, tempBuff.Duration, tempBuff.TimeElapsed);
+                        if (b.BuffType == BuffType.COUNTER)
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
+                        }
+                        else
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateCount(b, b.Duration, b.TimeElapsed);
+                        }
                     }
-                    tempBuff.ActivateBuff();
                 }
                 // Only other case where RemoveBuff should be called is when there is one stack remaining on the buff.
                 else
