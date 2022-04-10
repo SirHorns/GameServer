@@ -204,5 +204,8 @@ namespace LeagueSandbox.GameServer.GameObjects
                 }
             }
         }
+
+        public virtual void AddBuff() { }
+        public virtual void RemoveBuff() { }
     }
 }

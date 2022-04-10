@@ -21,4 +21,8 @@
     <ProjectReference Include="..\QuadTree\QuadTree.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="GameObjects\NewFolder\" />
+  </ItemGroup>
+
 </Project>

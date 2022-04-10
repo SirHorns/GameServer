@@ -1352,11 +1352,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     RemoveBuffSlot(b);
 
                     // Refresh the time of the parent buff and adds a stack if Max Stacks wasn't reached.
-                    ParentBuffs[b.Name].ResetTimeElapsed();
-                    if (ParentBuffs[b.Name].IncrementStackCount())
-                    {
-                        ParentBuffs[b.Name].ActivateBuff();
-                    }
+                    ParentBuffs[b.Name].AddBuff(); //.ResetTimeElapsed();
 
                     if (!b.IsHidden)
                     {
@@ -1550,11 +1546,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 }
                 else if (b.BuffAddType == BuffAddType.STACKS_AND_RENEWS && b.StackCount > 1 && !b.Elapsed())
                 {
-                    b.DecrementStackCount();
+                    ParentBuffs[b.Name].RemoveBuff();
 
                     if (!b.IsHidden)
                     {
-                        _game.PacketNotifier.NotifyNPC_BuffUpdateCount(b, b.Duration - b.TimeElapsed, b.TimeElapsed);
+                        _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration - ParentBuffs[b.Name].TimeElapsed, ParentBuffs[b.Name].TimeElapsed);
                     }
                 }
                 // If the buff is supposed to be applied alongside other buffs of the same name, and their are more than one already present.
@@ -1600,16 +1596,16 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 // Only other case where RemoveBuff should be called is when there is one stack remaining on the buff.
                 else
                 {
-                    if (!b.Elapsed())
+                    if (!ParentBuffs[b.Name].Elapsed())
                     {
-                        b.DeactivateBuff();
+                        ParentBuffs[b.Name].DeactivateBuff();
                     }
 
                     RemoveBuff(b.Name, true);
                     BuffList.RemoveAll(buff => buff.Elapsed());
                     if (!b.IsHidden)
                     {
-                        _game.PacketNotifier.NotifyNPC_BuffRemove2(b);
+                        _game.PacketNotifier.NotifyNPC_BuffRemove2(ParentBuffs[b.Name]);
                     }
                 }
             }

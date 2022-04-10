@@ -74,5 +74,7 @@ namespace GameServerCore.Domain.GameObjects
         void ResetTimeElapsed();
         void SetSlot(byte slot);
         void SetToolTipVar<T>(int tipIndex, T value) where T : struct;
+        public void AddBuff();
+        public void RemoveBuff();
     }
 }
