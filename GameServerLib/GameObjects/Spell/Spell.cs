@@ -1278,9 +1278,23 @@ namespace LeagueSandbox.GameServer.GameObjects.Spell
         /// <summary>
         /// Toggles the auto cast state for this spell.
         /// </summary>
-        public void SetAutocast()
+        /// <param name="caster">Caster of the spell</param>
+        /// <param name="slot">slot to cast</param>
+        /// <param name="critSlot">Crit slot of casted spell</param>
+        public void SetAutocast(byte slot = 0, byte critSlot = 0)
         {
-            _game.PacketNotifier.NotifyNPC_SetAutocast(CastInfo.Owner, this);
+            _game.PacketNotifier.NotifyNPC_SetAutocast(CastInfo.Owner, slot, critSlot);
+        }
+
+        /// <summary>
+        /// Toggles the auto cast state for this spell.
+        /// </summary>
+        /// <param name="caster">Caster of the spell</param>
+        /// <param name="spell">Spell to cast</param>
+        /// <param name="critSlot">Crit slot of casted spell</param>
+        public void SetAutocast(byte critSlot = 0)
+        {
+            _game.PacketNotifier.NotifyNPC_SetAutocast(CastInfo.Owner, this, critSlot);
         }
 
         /// <summary>

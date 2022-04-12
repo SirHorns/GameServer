@@ -856,6 +856,28 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         }
 
         /// <summary>
+        /// </summary>
+        /// <param name="name">Internal name of the spell to set.</param>
+        /// <param name="slot">Slot of the spell to replace.</param>
+        /// <param name="slot">Index of the icon to replace.</param>
+        /// <param name="enabled">Whether or not the new spell should be enabled.</param>
+        /// <param name="networkOld">Whether or not to notify clients of this change using an older packet method.</param>
+        /// <returns>Newly created spell set.</returns>
+        public void SetSpellIcon(string name, byte slot, byte iconIndex, bool networkOld = false)
+        {
+            if (this is IChampion champion)
+            {
+                int userId = (int)_game.PlayerManager.GetClientInfoByChampion(champion).PlayerId;
+                // TODO: Verify if this is all that is needed.
+                _game.PacketNotifier.NotifyChangeSlotSpellData(userId, champion, slot, ChangeSlotSpellDataType.IconIndex, newName: name, newIconIndex: iconIndex);
+                if (networkOld)
+                {
+                    _game.PacketNotifier.NotifyS2C_SetSpellData(userId, NetId, name, slot);
+                }
+            }
+        }
+
+        /// <summary>
         /// Sets the spell that this unit will cast when it gets in range of the spell's target.
         /// Overrides auto attack spell casting.
         /// </summary>

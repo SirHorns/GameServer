@@ -16,14 +16,15 @@ using log4net;
 
 namespace LeagueSandbox.GameServer.GameObjects
 {
-    public class BuffStacksRenew : Buff, IBuff
+    public class BuffStacksContinue : Buff, IBuff
     {
         protected readonly ILog Logger;
-        public BuffStacksRenew(
+        private IObjAiBase _owner;
+        public BuffStacksContinue(
             Game game,
             string buffName,
-            float duration, 
-            int stacks, 
+            float duration,
+            int stacks,
             ISpell originSpell,
             IAttackableUnit onto,
             IObjAiBase from,
@@ -31,43 +32,26 @@ namespace LeagueSandbox.GameServer.GameObjects
             ) : base(game, buffName, duration, stacks, originSpell, onto, from, infiniteDuration)
         {
             Logger = LoggerProvider.GetLogger();
-        }
-
-        public bool IncramentStacks()
-        {
-            if (StackCount < MaxStacks)
-            {
-                StackCount++;
-                return false;
-            }
-            return true;
-        }
-
-        public bool DecramentStacks()
-        {
-            if (StackCount > 0)
-            {
-                StackCount++;
-                return true;
-            }
-            return false;
+            _owner = from;
         }
 
         public override void AddBuff()
         {
-            if(IncramentStacks())
-            {
-                ActivateBuff();
-            }
-            
-            ResetTimeElapsed();
+            _owner.GetBuffsWithName(this.Name).ForEach(buff =>
+           {
+               if(buff != this)
+               {
+                   ResetTimeElapsed();
+               }
+           });
+
+            IncrementStackCount();
         }
         public override void RemoveBuff()
         {
-            if(DecramentStacks())
-            {
-                DeactivateBuff();
-            }
+            ResetTimeElapsed();
+            DecrementStackCount();
+            DeactivateBuff();
         }
     }
 }

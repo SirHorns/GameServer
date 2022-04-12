@@ -446,6 +446,7 @@ namespace GameServerCore.Packets.Interfaces
         /// <param name="level">New level of the spell after being upgraded.</param>
         /// <param name="points">New number of points after the upgrade.</param>
         void NotifyNPC_UpgradeSpellAns(int userId, uint netId, byte slot, byte level, byte points);
+        void NotifyNPC_SetAutocast(IObjAiBase caster, byte slot, byte critSlot = 0);
         /// <summary>
         /// Sends a packet to all users with vision of the given caster detailing that the given spell has been set to auto cast (as well as the spell in the critSlot) for the given caster.
         /// </summary>

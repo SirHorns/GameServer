@@ -2091,6 +2091,30 @@ namespace PacketDefinitions420
         /// Sends a packet to all users with vision of the given caster detailing that the given spell has been set to auto cast (as well as the spell in the critSlot) for the given caster.
         /// </summary>
         /// <param name="caster">Unit responsible for the autocasting.</param>
+        /// <param name="slot">spell slot to cast</param>
+        /// // TODO: Verify critSlot functionality
+        /// <param name="critSlot">Optional spell slot to cast when a crit is going to occur.</param>
+        public void NotifyNPC_SetAutocast(IObjAiBase caster, byte slot = 0, byte critSlot = 0)
+        {
+            var autoCast = new NPC_SetAutocast
+            {
+                SenderNetID = caster.NetId,
+                Slot = slot,
+                CritSlot = critSlot
+            };
+
+            if (critSlot == 0)
+            {
+                autoCast.CritSlot = autoCast.Slot;
+            }
+
+            _packetHandlerManager.BroadcastPacketVision(caster, autoCast.GetBytes(), Channel.CHL_S2C);
+        }
+
+        /// <summary>
+        /// Sends a packet to all users with vision of the given caster detailing that the given spell has been set to auto cast (as well as the spell in the critSlot) for the given caster.
+        /// </summary>
+        /// <param name="caster">Unit responsible for the autocasting.</param>
         /// <param name="spell">Spell to auto cast.</param>
         /// // TODO: Verify critSlot functionality
         /// <param name="critSlot">Optional spell slot to cast when a crit is going to occur.</param>

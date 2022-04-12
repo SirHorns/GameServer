@@ -16,14 +16,15 @@ using log4net;
 
 namespace LeagueSandbox.GameServer.GameObjects
 {
-    public class BuffRenewExisting : Buff, IBuff
+    public class BuffRenewsExisting : Buff, IBuff
     {
         protected readonly ILog Logger;
-        public BuffRenewExisting(
+        public BuffRenewsExisting(
             Game game, 
             string buffName, 
-            float duration, int 
-            stacks, ISpell originSpell, 
+            float duration, 
+            int stacks, 
+            ISpell originSpell, 
             IAttackableUnit onto, 
             IObjAiBase from, 
             bool infiniteDuration = false
@@ -35,6 +36,10 @@ namespace LeagueSandbox.GameServer.GameObjects
         
         public override void AddBuff() {
             ResetTimeElapsed();
+        }
+        public override void RemoveBuff()
+        {
+            DeactivateBuff();
         }
     }
 }

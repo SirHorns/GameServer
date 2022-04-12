@@ -123,6 +123,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             BuffList = new List<IBuff>();
         }
 
+        #region Public Methods
+
         public override void OnAdded()
         {
             base.OnAdded();
@@ -178,10 +180,10 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             Position = vec;
             _movementUpdated = true;
 
-            if(!IsPathEnded())
+            if (!IsPathEnded())
             {
                 // Reevaluate our current path to account for the starting position being changed.
-                if(repath)
+                if (repath)
                 {
                     List<Vector2> safePath = _game.Map.PathingHandler.GetPath(Position, _game.Map.NavigationGrid.GetClosestTerrainExit(Waypoints.Last(), PathfindingRadius));
 
@@ -382,29 +384,29 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             switch (type)
             {
                 case DamageType.DAMAGE_TYPE_PHYSICAL:
-                {
-                    if (Status.HasFlag(StatusFlags.PhysicalImmune))
                     {
-                        return false;
+                        if (Status.HasFlag(StatusFlags.PhysicalImmune))
+                        {
+                            return false;
+                        }
+                        break;
                     }
-                    break;
-                }
                 case DamageType.DAMAGE_TYPE_MAGICAL:
-                {
-                    if (Status.HasFlag(StatusFlags.MagicImmune))
                     {
-                        return false;
+                        if (Status.HasFlag(StatusFlags.MagicImmune))
+                        {
+                            return false;
+                        }
+                        break;
                     }
-                    break;
-                }
                 case DamageType.DAMAGE_TYPE_MIXED:
-                {
-                    if (Status.HasFlag(StatusFlags.MagicImmune) || Status.HasFlag(StatusFlags.PhysicalImmune))
                     {
-                        return false;
+                        if (Status.HasFlag(StatusFlags.MagicImmune) || Status.HasFlag(StatusFlags.PhysicalImmune))
+                        {
+                            return false;
+                        }
+                        break;
                     }
-                    break;
-                }
             }
 
             return true;
@@ -717,7 +719,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             ApiEventManager.OnDeath.Publish(data);
             if (data.Unit is IObjAiBase obj)
             {
-                if(!(obj is IMonster))
+                if (!(obj is IMonster))
                 {
                     var champs = _game.ObjectManager.GetChampionsInRangeFromTeam(Position, _game.Map.MapScript.MapScriptMetadata.ExpRange, Team, true);
                     if (champs.Count > 0)
@@ -803,95 +805,95 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     {
                         // CallForHelpSuppressor
                         case StatusFlags.CanAttack:
-                        {
-                            Stats.SetActionState(ActionState.CAN_ATTACK, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.CAN_ATTACK, enabled);
+                                break;
+                            }
                         case StatusFlags.CanCast:
-                        {
-                            Stats.SetActionState(ActionState.CAN_CAST, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.CAN_CAST, enabled);
+                                break;
+                            }
                         case StatusFlags.CanMove:
-                        {
-                            Stats.SetActionState(ActionState.CAN_MOVE, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.CAN_MOVE, enabled);
+                                break;
+                            }
                         case StatusFlags.CanMoveEver:
-                        {
-                            Stats.SetActionState(ActionState.CAN_NOT_MOVE, !enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.CAN_NOT_MOVE, !enabled);
+                                break;
+                            }
                         case StatusFlags.Charmed:
-                        {
-                            Stats.SetActionState(ActionState.CHARMED, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.CHARMED, enabled);
+                                break;
+                            }
                         // DisableAmbientGold
                         case StatusFlags.Feared:
-                        {
-                            Stats.SetActionState(ActionState.FEARED, enabled);
-                            // TODO: Verify
-                            Stats.SetActionState(ActionState.IS_FLEEING, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.FEARED, enabled);
+                                // TODO: Verify
+                                Stats.SetActionState(ActionState.IS_FLEEING, enabled);
+                                break;
+                            }
                         case StatusFlags.ForceRenderParticles:
-                        {
-                            Stats.SetActionState(ActionState.FORCE_RENDER_PARTICLES, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.FORCE_RENDER_PARTICLES, enabled);
+                                break;
+                            }
                         // GhostProof
                         case StatusFlags.Ghosted:
-                        {
-                            Stats.SetActionState(ActionState.IS_GHOSTED, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.IS_GHOSTED, enabled);
+                                break;
+                            }
                         // IgnoreCallForHelp
                         // Immovable
                         // Invulnerable
                         // MagicImmune
                         case StatusFlags.NearSighted:
-                        {
-                            Stats.SetActionState(ActionState.IS_NEAR_SIGHTED, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.IS_NEAR_SIGHTED, enabled);
+                                break;
+                            }
                         // Netted
                         case StatusFlags.NoRender:
-                        {
-                            Stats.SetActionState(ActionState.NO_RENDER, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.NO_RENDER, enabled);
+                                break;
+                            }
                         // PhysicalImmune
                         case StatusFlags.RevealSpecificUnit:
-                        {
-                            Stats.SetActionState(ActionState.REVEAL_SPECIFIC_UNIT, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.REVEAL_SPECIFIC_UNIT, enabled);
+                                break;
+                            }
                         // Rooted
                         // Silenced
                         case StatusFlags.Sleep:
-                        {
-                            Stats.SetActionState(ActionState.IS_ASLEEP, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.IS_ASLEEP, enabled);
+                                break;
+                            }
                         case StatusFlags.Stealthed:
-                        {
-                            Stats.SetActionState(ActionState.STEALTHED, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.STEALTHED, enabled);
+                                break;
+                            }
                         // SuppressCallForHelp
                         case StatusFlags.Targetable:
-                        {
-                            Stats.IsTargetable = enabled;
-                            // TODO: Verify.
-                            Stats.SetActionState(ActionState.TARGETABLE, enabled);
-                            break;
-                        }
+                            {
+                                Stats.IsTargetable = enabled;
+                                // TODO: Verify.
+                                Stats.SetActionState(ActionState.TARGETABLE, enabled);
+                                break;
+                            }
                         case StatusFlags.Taunted:
-                        {
-                            Stats.SetActionState(ActionState.TAUNTED, enabled);
-                            break;
-                        }
+                            {
+                                Stats.SetActionState(ActionState.TAUNTED, enabled);
+                                break;
+                            }
                     }
                 }
             }
@@ -983,8 +985,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         public void TeleportTo(Vector2 position, bool repath = false)
         {
             position = _game.Map.NavigationGrid.GetClosestTerrainExit(position, PathfindingRadius + 1.0f);
-            
-            if(repath)
+
+            if (repath)
             {
                 SetPosition(position, true);
             }
@@ -1246,7 +1248,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     }
 
                     // Reset the already existing buff's timer.
-                    ParentBuffs[b.Name].ResetTimeElapsed();
+                    ParentBuffs[b.Name].AddBuff();
 
                     // Update the visual buff in-game (just resets the time on the icon).
                     if (!b.IsHidden)
@@ -1367,7 +1369,51 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     }
                     // TODO: Unload and reload all data of buff script here.
                 }
-            }    
+                else if (ParentBuffs[b.Name].BuffAddType == BuffAddType.STACKS_AND_DECAYS)
+                {
+
+                    if (ParentBuffs[b.Name].StackCount >= ParentBuffs[b.Name].MaxStacks)
+                    {
+                        ParentBuffs[b.Name].AddBuff();
+
+                        if (!b.IsHidden)
+                        {
+                            // If the buff is a counter buff (ex: Nasus Q stacks), then use a packet specialized for big buff stack counts (int.MaxValue).
+                            if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
+                            {
+                                _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
+                            }
+                            // Otherwise, use the normal buff stack (254) update (usually just adds one to the number on the icon and refreshes the time of the icon).
+                            else
+                            {
+                                _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
+                            }
+                        }
+
+                        return;
+                    }
+
+                    // Don't need the newly added buff instance as we already have a parent who we can add stacks to.
+                    BuffList.Add(b);
+                    b.ActivateBuff();
+
+                    // Refresh the time of the parent buff and adds a stack if Max Stacks wasn't reached.
+                    ParentBuffs[b.Name].AddBuff(); //.ResetTimeElapsed();
+
+                    if (!b.IsHidden)
+                    {
+                        if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
+                        }
+                        else
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
+                        }
+                    }
+                    // TODO: Unload and reload all data of buff script here.
+                }
+            }
         }
 
         /// <summary>
@@ -1427,23 +1473,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             return slot;
         }
 
-        /// <summary>
-        /// Gets the slot of the given buff instance, or an open slot if no buff is given.
-        /// </summary>
-        /// <param name="buffToLookFor">Buff to check. Leave empty to get an empty slot.</param>
-        /// <returns>Slot of the given buff or an empty slot.</returns>
-        private byte GetBuffSlot(IBuff buffToLookFor = null)
-        {
-            for (byte i = 1; i < BuffSlots.Length; i++) // Find the first open slot or the slot corresponding to buff
-            {
-                if (BuffSlots[i] == buffToLookFor)
-                {
-                    return i;
-                }
-            }
-
-            throw new Exception("No slot found with requested value"); // If no open slot or no corresponding slot
-        }
 
         /// <summary>
         /// Gets the list of parent buffs applied to this unit.
@@ -1593,6 +1622,27 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                         }
                     }
                 }
+                else if (b.BuffAddType == BuffAddType.STACKS_AND_DECAYS)
+                {
+                    ParentBuffs[b.Name].RemoveBuff();
+
+                    if (ParentBuffs[b.Name].StackCount <= 0)
+                    {
+
+                    }
+
+                    if (!b.IsHidden)
+                    {
+                        if (b.BuffType == BuffType.COUNTER)
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
+                        }
+                        else
+                        {
+                            _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
+                        }
+                    }
+                }
                 // Only other case where RemoveBuff should be called is when there is one stack remaining on the buff.
                 else
                 {
@@ -1605,39 +1655,13 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     BuffList.RemoveAll(buff => buff.Elapsed());
                     if (!b.IsHidden)
                     {
-                        _game.PacketNotifier.NotifyNPC_BuffRemove2(ParentBuffs[b.Name]);
+                        _game.PacketNotifier.NotifyNPC_BuffRemove2(b);
                     }
                 }
             }
         }
 
-        /// <summary>
-        /// Removes the given buff instance from the buff slots of this unit.
-        /// Called automatically by RemoveBuff().
-        /// </summary>
-        /// <param name="b">Buff instance to check for.</param>
-        private void RemoveBuffSlot(IBuff b)
-        {
-            var slot = GetBuffSlot(b);
-            BuffSlots[slot] = null;
-        }
 
-        /// <summary>
-        /// Removes the parent buff of the given internal name from this unit.
-        /// </summary>
-        /// <param name="b">Internal buff name to remove.</param>
-        private void RemoveBuff(string b, bool removeSlot)
-        {
-            if (removeSlot && ParentBuffs[b] != null)
-            {
-                RemoveBuffSlot(ParentBuffs[b]);
-            }
-            lock (_buffsLock)
-            {
-                BuffList.Remove(ParentBuffs[b]);
-                ParentBuffs.Remove(b);
-            }
-        }
 
         /// <summary>
         /// Removes all buffs of the given internal name from this unit regardless of stack count.
@@ -1709,6 +1733,22 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         }
 
         /// <summary>
+        /// Sets this unit's animation states to the given set of states.
+        /// Given state pairs are expected to follow a specific structure:
+        /// First string is the animation to override, second string is the animation to play in place of the first.
+        /// <param name="animPairs">Dictionary of animations to set.</param>
+        public void SetAnimStates(Dictionary<string, string> animPairs)
+        {
+            if (animPairs != null)
+            {
+                _game.PacketNotifier.NotifyS2C_SetAnimStates(this, animPairs);
+            }
+        }
+
+        #endregion
+
+
+        /// <summary>
         /// Sets this unit's current dash state to the given state.
         /// </summary>
         /// <param name="state">State to set. True = dashing, false = not dashing.</param>
@@ -1739,17 +1779,59 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             }
         }
 
+        
+
+
+        #region Private Methods
+
         /// <summary>
-        /// Sets this unit's animation states to the given set of states.
-        /// Given state pairs are expected to follow a specific structure:
-        /// First string is the animation to override, second string is the animation to play in place of the first.
-        /// <param name="animPairs">Dictionary of animations to set.</param>
-        public void SetAnimStates(Dictionary<string, string> animPairs)
+        /// Removes the given buff instance from the buff slots of this unit.
+        /// Called automatically by RemoveBuff().
+        /// </summary>
+        /// <param name="b">Buff instance to check for.</param>
+        private void RemoveBuffSlot(IBuff b)
         {
-            if (animPairs != null)
+            var slot = GetBuffSlot(b);
+            BuffSlots[slot] = null;
+        }
+
+
+        /// <summary>
+        /// Removes the parent buff of the given internal name from this unit.
+        /// </summary>
+        /// <param name="b">Internal buff name to remove.</param>
+        private void RemoveBuff(string b, bool removeSlot)
+        {
+            if (removeSlot && ParentBuffs[b] != null)
             {
-                _game.PacketNotifier.NotifyS2C_SetAnimStates(this, animPairs);
+                RemoveBuffSlot(ParentBuffs[b]);
+            }
+            lock (_buffsLock)
+            {
+                BuffList.Remove(ParentBuffs[b]);
+                ParentBuffs.Remove(b);
             }
         }
+
+        /// <summary>
+        /// Gets the slot of the given buff instance, or an open slot if no buff is given.
+        /// </summary>
+        /// <param name="buffToLookFor">Buff to check. Leave empty to get an empty slot.</param>
+        /// <returns>Slot of the given buff or an empty slot.</returns>
+        private byte GetBuffSlot(IBuff buffToLookFor = null)
+        {
+            for (byte i = 1; i < BuffSlots.Length; i++) // Find the first open slot or the slot corresponding to buff
+            {
+                if (BuffSlots[i] == buffToLookFor)
+                {
+                    return i;
+                }
+            }
+
+            throw new Exception("No slot found with requested value"); // If no open slot or no corresponding slot
+        }
+
+
+        #endregion
     }
 }
