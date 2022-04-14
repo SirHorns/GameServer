@@ -27,6 +27,10 @@
         /// Adds a completely new buff instance to the buff target regardless of any other buffs of the same name applied.
         /// Inherits stack count of the oldest buff of the same name.
         /// </summary>
-        STACKS_AND_OVERLAPS
+        STACKS_AND_OVERLAPS,
+        /// <summary>
+        /// Adds a completely new buff instance to the buff target and decyas through each stacks added effects.
+        /// </summary>
+        STACKS_AND_DECAYS
     }
 }

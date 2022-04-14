@@ -210,6 +210,11 @@ namespace GameServerCore.Domain.GameObjects
         /// <param name="b">Buff to remove.</param>
         void RemoveBuff(IBuff b);
         /// <summary>
+        /// Removes a single active instance of a buff from this unit.
+        /// </summary>
+        /// <param name="b">Internal buff name to remove.</param>
+        void RemoveBuffInstance(string b);
+        /// <summary>
         /// Removes all buffs of the given internal name from this unit regardless of stack count.
         /// Intended mainly for buffs with BuffAddType.STACKS_AND_OVERLAPS.
         /// </summary>

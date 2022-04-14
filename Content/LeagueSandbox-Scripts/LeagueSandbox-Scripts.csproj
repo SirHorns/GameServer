@@ -10,4 +10,10 @@
     <ProjectReference Include="..\..\GameServerLib\GameServerLib.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Buffs\NewFolder\" />
+    <Folder Include="Characters\NewFolder1\" />
+    <Folder Include="Characters\NewFolder\" />
+  </ItemGroup>
+
 </Project>

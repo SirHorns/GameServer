@@ -269,13 +269,22 @@ namespace LeagueSandbox.GameServer.API
         /// <param name="from">Owner of the buff.</param>
         /// <param name="infiniteduration">Whether or not the buff should last forever.</param>
         /// <returns>New buff instance.</returns>
-        public static IBuff AddBuff(string buffName, float duration, byte stacks, ISpell originspell, IAttackableUnit onto, IObjAiBase from, bool infiniteduration = false)
+        public static IBuff AddBuff(string buffName, float duration, byte stacks, ISpell originspell, IAttackableUnit onto, IObjAiBase from, bool infiniteduration = false, BuffAddType addType = BuffAddType.STACKS_AND_RENEWS)
         {
             IBuff buff;
 
             try
             {
-                buff = new Buff(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                buff = addType switch
+                {
+                    BuffAddType.REPLACE_EXISTING => new BuffReplaceExisting(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration),
+                    BuffAddType.RENEW_EXISTING => new BuffRenewsExisting(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration),
+                    BuffAddType.STACKS_AND_RENEWS => new BuffStacksRenews(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration),
+                    BuffAddType.STACKS_AND_CONTINUE => new BuffStacksContinue(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration),
+                    BuffAddType.STACKS_AND_OVERLAPS => new BuffStacksOverlaps(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration),
+                    BuffAddType.STACKS_AND_DECAYS => new BuffStacksDecays(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration),
+                    _ => throw new InvalidOperationException("Invalid BuffAddType Given"),
+                };
             }
             catch (ArgumentException exception)
             {
@@ -857,16 +866,6 @@ namespace LeagueSandbox.GameServer.API
         public static void ClearOverrideAnimation(IAttackableUnit unit, string overriddenAnim)
         {
             unit.SetAnimStates(new Dictionary<string, string> { { overriddenAnim, "" } });
-        }
-
-        /// <summary>
-        /// Toggles the visual auto cast indicator for the given spell.
-        /// </summary>
-        /// <param name="spell">Spell to auto cast.</param>
-        /// TODO: Verify if this works.
-        public static void SetAutocast(ISpell spell)
-        {
-            spell.SetAutocast();
         }
 
         /// <summary>
