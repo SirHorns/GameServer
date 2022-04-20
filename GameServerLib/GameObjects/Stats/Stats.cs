@@ -310,6 +310,10 @@ namespace LeagueSandbox.GameServer.GameObjects.Stats
             damage = defense >= 0 ? 100 / (100 + defense) * damage : (2 - 100 / (100 - defense)) * damage;
             return damage;
         }
+        public float GetPostShieldDamage(float damage, DamageType type, IAttackableUnit attacker)
+        {
+            return damage;
+        }
 
         public void SetActionState(ActionState state, bool enabled)
         {

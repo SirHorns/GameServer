@@ -286,5 +286,17 @@ namespace GameServerCore.Domain.GameObjects
         /// First string is the animation to override, second string is the animation to play in place of the first.
         /// <param name="animPairs">Dictionary of animations to set.</param>
         void SetAnimStates(Dictionary<string, string> animPairs);
+        /// <summary>
+        /// Adds the given shield instance to this unit.
+        /// </summary>
+        /// <param name="s">Shield instance to add.</param>
+        /// <param name="stopShieldFade">should the shield fade or not</param>
+        void AddShield(IShield s, bool stopShieldFade);
+        void RemoveShield(IShield s, bool stopShieldFade);
+        /// <summary>
+        /// Gets a list of all shields applied to this unit.
+        /// </summary>
+        /// <returns>List of buff instances.</returns>
+        List<IShield> GetShields();
     }
 }

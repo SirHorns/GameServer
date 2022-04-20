@@ -24,15 +24,16 @@ namespace LeagueSandbox.GameServer.GameObjects
         private bool _remove;
 
         public BuffAddType BuffAddType { get; }
-        public BuffType BuffType { get; } /// TODO: Add comments to BuffType enum.
-        public float Duration { get; }
+        public BuffType BuffType { get; } /// TODO: Add comments to BuffType enum.   
         public bool IsHidden { get; }
         public string Name { get; }
         public ISpell OriginSpell { get; }
         public byte Slot { get; private set; }
         public IObjAiBase SourceUnit { get; }
         public IAttackableUnit TargetUnit { get; }
+        public float Duration { get; }
         public float TimeElapsed { get; private set; }
+        public float TimeRemaining { get; private set; }
         /// <summary>
         /// Script instance for this buff. Casting to a specific buff class gives access its functions and variables.
         /// </summary>
@@ -45,6 +46,14 @@ namespace LeagueSandbox.GameServer.GameObjects
         /// Used to update player buff tool tip values.
         /// </summary>
         public IToolTipData ToolTipData { get; protected set; }
+
+        public BuffRemovalSource RemovalSource { get; private set; }
+
+        public BuffRejectionState RejectionState { get; private set; }
+
+        public bool HasBeenRemoved { get; private set; }
+
+        public IShield ShieldInstance { get; set; }
 
         public Buff(Game game, string buffName, float duration, int stacks, ISpell originSpell, IAttackableUnit onto, IObjAiBase from, bool infiniteDuration = false)
         {
@@ -195,11 +204,15 @@ namespace LeagueSandbox.GameServer.GameObjects
             }
 
             TimeElapsed += diff / 1000.0f;
+
+            TimeRemaining = Duration / TimeElapsed;
+
             if (Math.Abs(Duration) > Extensions.COMPARE_EPSILON)
             {
                 BuffScript?.OnUpdate(diff);
                 if (TimeElapsed >= Duration)
                 {
+                    RemovalSource = BuffRemovalSource.TIMEOUT;
                     DeactivateBuff();
                 }
             }

@@ -286,7 +286,29 @@ namespace LeagueSandbox.GameServer.API
             onto.AddBuff(buff);
             return buff;
         }
+        public static IShield AddShield(IBuff sourceBuff, ShieldType shieldType, float shieldAmount, bool stopShieldFade, IAttackableUnit onto, bool isTrueShield = false)
+        {
 
+            IShield shield;
+
+            try
+            {
+                shield = new Shield(sourceBuff, shieldAmount, shieldType, isTrueShield);
+            }
+            catch (ArgumentException exception)
+            {
+                _logger.Error(exception);
+                return null;
+            }
+
+            onto.AddShield(shield, stopShieldFade);
+
+            return shield;
+        }
+        public static void RemoveShield(IShield shield)
+        {
+            shield.RemoveShield(false);
+        }
         /// <summary>
         /// Whether or not the specified unit has the specified buff instance.
         /// </summary>

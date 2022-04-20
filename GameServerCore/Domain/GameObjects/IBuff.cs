@@ -16,9 +16,15 @@ namespace GameServerCore.Domain.GameObjects
         /// </summary>
         BuffType BuffType { get; }
         /// <summary>
-        /// Total time this buff should be applied to its target.
+        /// Removal Source of the Buff. Determines how the buff's removal should be handled
         /// </summary>
-        float Duration { get; }
+        BuffRemovalSource RemovalSource { get; }
+        BuffRejectionState RejectionState { get; }
+        bool HasBeenRemoved { get; }
+
+        IShield ShieldInstance { get; set; }
+        bool HasShield { get { return ShieldInstance != null; } }
+        
         /// <summary>
         /// Whether or not this buff should be shown on clients' buff bar (HUD).
         /// </summary>
@@ -44,9 +50,17 @@ namespace GameServerCore.Domain.GameObjects
         /// </summary>
         IAttackableUnit TargetUnit { get; }
         /// <summary>
+        /// Total time this buff should be applied to its target.
+        /// </summary>
+        float Duration { get; }
+        /// <summary>
         /// Time since this buff's timer started.
         /// </summary>
         float TimeElapsed { get; }
+        /// <summary>
+        /// Remaining Time Buff will be up.
+        /// </summary>
+        float TimeRemaining { get; }
         /// <summary>
         /// Script instance for this buff. Casting to a specific buff class gives access its functions and variables.
         /// </summary>

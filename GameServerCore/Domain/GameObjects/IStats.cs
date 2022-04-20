@@ -64,6 +64,7 @@ namespace GameServerCore.Domain.GameObjects
         bool GetActionState(ActionState state);
         bool GetSpellEnabled(byte id);
         float GetPostMitigationDamage(float damage, DamageType type, IAttackableUnit attacker);
+        float GetPostShieldDamage(float damage, DamageType type, IAttackableUnit attacker);
         bool GetSummonerSpellEnabled(byte id);
         
         void SetActionState(ActionState state, bool enabled);

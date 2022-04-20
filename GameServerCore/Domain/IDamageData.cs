@@ -34,5 +34,25 @@ namespace GameServerCore.Domain
         /// Damage after being reduced by MR/Armor
         /// </summary>
         float PostMitigationdDamage { get; }
+        /// <summary>
+        /// Total Damage Shielded
+        /// </summary>
+        float totalDamageShielded { get; }
+        /// <summary>
+        /// Damage Shielded by Standard Shields
+        /// </summary>
+        float damageBlockedByStandardShields { get; }
+        /// <summary>
+        /// Damage Shielded by Physical Shields
+        /// </summary>
+        float damageBlockedByPhysicalDamageShields { get; }
+        /// <summary>
+        /// Damage Shielded by Magical Shields
+        /// </summary>
+        float damageBlockedByMagicDamageShields { get; }
+        /// <summary>
+        /// Damage Shielded by True Damage Shields
+        /// </summary>
+        float damageBlockedByTrueDamageShields { get; }
     }
 }

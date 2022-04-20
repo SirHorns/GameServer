@@ -79,6 +79,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         /// TODO: Verify if we can remove this in favor of BuffSlots while keeping the functions which allow for easy accessing of individual buff instances.
         /// TODO: Move to AttackableUnit.
         private List<IBuff> BuffList { get; }
+        private List<IShield> ShieldList { get; }
         /// <summary>
         /// Waypoints that make up the path a game object is walking in.
         /// </summary>
@@ -1484,6 +1485,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             return BuffList;
         }
 
+        public List<IShield> GetShields()
+        {
+            return ShieldList;
+        }
+
         /// <summary>
         /// Gets the number of parent buffs applied to this unit.
         /// </summary>
@@ -1754,6 +1760,78 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             {
                 _game.PacketNotifier.NotifyS2C_SetAnimStates(this, animPairs);
             }
+        }
+
+        public void AddShield(IShield s, bool stopShieldFade)
+        {
+            int insertionIndex = 0;
+            for (int i = 0; i < ShieldList.Count; i++)
+            {
+                if (ShieldList[i].sourceBuff.TimeRemaining > s.sourceBuff.TimeRemaining)
+                {
+                    insertionIndex = i;
+                    break;
+                }
+            }
+
+            ShieldList.Insert(insertionIndex, s);
+
+            bool IsPhysical = false;
+            bool IsMagical = false;
+
+            switch (s.shieldType)
+            {
+                case ShieldType.STANDARD_SHIELD:
+                    IsPhysical = true;
+                    IsMagical = true;
+                    break;
+                case ShieldType.PHYSICAL_SHIELD:
+                    IsPhysical = true;
+                    IsMagical = true;
+                    break;
+                case ShieldType.MAGICAL_SHIELD:
+                    IsPhysical = false;
+                    IsMagical = true;
+                    break;
+                case ShieldType.TRUEDAMAGE_SHIELD:
+                    break;
+                default:
+                    throw new System.Exception("Invalid Shield Type Given.");
+            }
+
+
+            _game.PacketNotifier.NotifyModifyShield(this, s.shieldHealthMax, IsPhysical, IsMagical, stopShieldFade);
+        }
+
+        public void RemoveShield(IShield s, bool stopShieldFade)
+        {
+            ShieldList.Remove(s);
+
+            bool IsPhysical = false;
+            bool IsMagical = false;
+
+            switch (s.shieldType)
+            {
+                case ShieldType.STANDARD_SHIELD:
+                    IsPhysical = true;
+                    IsMagical = true;
+                    break;
+                case ShieldType.PHYSICAL_SHIELD:
+                    IsPhysical = true;
+                    IsMagical = true;
+                    break;
+                case ShieldType.MAGICAL_SHIELD:
+                    IsPhysical = false;
+                    IsMagical = true;
+                    break;
+                case ShieldType.TRUEDAMAGE_SHIELD:
+                    break;
+                default:
+                    throw new System.Exception("Invalid Shield Type Given.");
+            }
+
+
+            _game.PacketNotifier.NotifyModifyShield(this, s.shieldHealthCurrent, IsPhysical, IsMagical, stopShieldFade);
         }
     }
 }
