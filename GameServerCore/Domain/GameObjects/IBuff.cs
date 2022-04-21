@@ -6,35 +6,47 @@ using System.Collections.Generic;
 namespace GameServerCore.Domain.GameObjects
 {
     public interface IBuff : IStackable, IUpdate
-    {       
-        /// <summary>
-        /// How this buff should be added and treated when adding new buffs of the same name.
-        /// </summary>
-        BuffAddType BuffAddType { get; }
+    {
         /// <summary>
         /// Type of buff to add. Determines how this buff interacts with mechanics of the game. Refer to BuffType.
         /// </summary>
         BuffType BuffType { get; }
         /// <summary>
-        /// Total time this buff should be applied to its target.
+        /// How this buff should be added and treated when adding new buffs of the same name.
         /// </summary>
-        float Duration { get; }
+        BuffAddType BuffAddType { get; }
         /// <summary>
-        /// Whether or not this buff should be shown on clients' buff bar (HUD).
+        /// What caused the Removal of this Buff.
         /// </summary>
-        bool IsHidden { get; }
+        BuffRemovalSource BuffRemovalSource { get; }
         /// <summary>
         /// Internal name of this buff.
         /// </summary>
         string Name { get; }
         /// <summary>
-        /// Spell which caused this buff to be applied.
+        /// Total time this buff should be applied to its target.
         /// </summary>
-        ISpell OriginSpell { get; }
+        float Duration { get; }
+        /// <summary>
+        /// Time since this buff's timer started.
+        /// </summary>
+        float TimeElapsed { get; }
+        /// <summary>
+        /// Time remaining on this buff before it expires.
+        /// </summary>
+        float TimeRemaining { get; }
         /// <summary>
         /// Slot of this buff instance. Maximum allowed is 255 due to packets.
         /// </summary>
         byte Slot { get; }
+        /// <summary>
+        /// Whether or not this buff should be shown on clients' buff bar (HUD).
+        /// </summary>
+        bool IsHidden { get; }
+        /// <summary>
+        /// Spell which caused this buff to be applied.
+        /// </summary>
+        ISpell OriginSpell { get; }
         /// <summary>
         /// Unit which applied this buff to its target.
         /// </summary>
@@ -43,10 +55,6 @@ namespace GameServerCore.Domain.GameObjects
         /// Unit which has this buff applied to it.
         /// </summary>
         IAttackableUnit TargetUnit { get; }
-        /// <summary>
-        /// Time since this buff's timer started.
-        /// </summary>
-        float TimeElapsed { get; }
         /// <summary>
         /// Script instance for this buff. Casting to a specific buff class gives access its functions and variables.
         /// </summary>
@@ -74,5 +82,8 @@ namespace GameServerCore.Domain.GameObjects
         void ResetTimeElapsed();
         void SetSlot(byte slot);
         void SetToolTipVar<T>(int tipIndex, T value) where T : struct;
+        virtual void OnAddBuff() { }
+        virtual void OnNewBuff() { }
+        virtual void OnRemoveBuff() { }
     }
 }

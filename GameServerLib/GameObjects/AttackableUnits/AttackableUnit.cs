@@ -77,7 +77,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         /// List of all buffs applied to this AI. Used for easier indexing of buffs.
         /// </summary>
         /// TODO: Verify if we can remove this in favor of BuffSlots while keeping the functions which allow for easy accessing of individual buff instances.
-        /// TODO: Move to AttackableUnit.
         private List<IBuff> BuffList { get; }
         /// <summary>
         /// Waypoints that make up the path a game object is walking in.
@@ -1201,12 +1200,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     ParentBuffs.Add(b.Name, b);
                     BuffList.Add(b);
                     // Add the buff to the visual hud.
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffAdd2(b, b.Duration, b.TimeElapsed);
-                    }
-                    // Activate the buff for BuffScripts
-                    b.ActivateBuff();
+                    ParentBuffs[b.Name].OnAddBuff();
+
                 }
                 // If the buff is supposed to replace any existing buff instances of the same name
                 else if (b.BuffAddType == BuffAddType.REPLACE_EXISTING)
@@ -1214,7 +1209,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     // Removing the previous buff of the same name.
                     var prevbuff = ParentBuffs[b.Name];
 
-                    prevbuff.DeactivateBuff();
+                    ParentBuffs[b.Name].OnNewBuff();
+
                     RemoveBuff(b.Name, false);
 
                     // Clear the newly given buff's slot since we will move it into the previous buff's slot.
@@ -1227,15 +1223,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     // Add the buff as a parent and normally.
                     ParentBuffs.Add(b.Name, b);
                     BuffList.Add(b);
-
-                    // Update the visual buff in-game (usually just resets the buff time of the visual icon).
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffReplace(b);
-                    }
-
-                    // New buff means new script, so we need to activate it.
-                    b.ActivateBuff();
                 }
                 else if (b.BuffAddType == BuffAddType.RENEW_EXISTING)
                 {
@@ -1246,13 +1233,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     }
 
                     // Reset the already existing buff's timer.
-                    ParentBuffs[b.Name].ResetTimeElapsed();
-
-                    // Update the visual buff in-game (just resets the time on the icon).
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffReplace(ParentBuffs[b.Name]);
-                    }
+                    ParentBuffs[b.Name].OnNewBuff();
                 }
                 // If the buff is supposed to be a single stackable buff with a timer = Duration * StackCount
                 else if (b.BuffAddType == BuffAddType.STACKS_AND_CONTINUE)
@@ -1508,15 +1489,13 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
         /// <summary>
         /// Removes the given buff from this unit. Called automatically when buff timers have finished.
-        /// Buffs with BuffAddType.STACKS_AND_OVERLAPS are removed incrementally, meaning one instance removed per RemoveBuff call.
-        /// Other BuffAddTypes are removed entirely, regardless of stacks. DecrementStackCount can be used as an alternative.
         /// </summary>
         /// <param name="b">Buff to remove.</param>
         public void RemoveBuff(IBuff b)
         {
             if (!HasBuff(b))
             {
-                return;
+                //return;
             }
 
             lock (_buffsLock)
@@ -1600,17 +1579,9 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 // Only other case where RemoveBuff should be called is when there is one stack remaining on the buff.
                 else
                 {
-                    if (!b.Elapsed())
-                    {
-                        b.DeactivateBuff();
-                    }
-
+                    ParentBuffs[b.Name].OnRemoveBuff();
                     RemoveBuff(b.Name, true);
                     BuffList.RemoveAll(buff => buff.Elapsed());
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffRemove2(b);
-                    }
                 }
             }
         }

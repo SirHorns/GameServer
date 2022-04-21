@@ -275,7 +275,7 @@ namespace LeagueSandbox.GameServer.API
 
             try
             {
-                buff = new Buff(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                buff = new BuffRenewExisting(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
             }
             catch (ArgumentException exception)
             {

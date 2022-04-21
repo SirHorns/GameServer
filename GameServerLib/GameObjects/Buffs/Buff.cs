@@ -21,18 +21,22 @@ namespace LeagueSandbox.GameServer.GameObjects
 
         // Function Vars.
         private readonly bool _infiniteDuration;
-        private bool _remove;
+        private bool _removed;
+        private bool IsTimerPostponed = true;
 
-        public BuffAddType BuffAddType { get; }
         public BuffType BuffType { get; } /// TODO: Add comments to BuffType enum.
-        public float Duration { get; }
-        public bool IsHidden { get; }
+        public BuffAddType BuffAddType { get; }
+        public BuffRemovalSource BuffRemovalSource { get; private set; }
         public string Name { get; }
-        public ISpell OriginSpell { get; }
+        public float Duration { get; }
+        public float TimeElapsed { get; private set; }
+        public float TimeRemaining { get; private set; }
         public byte Slot { get; private set; }
+        public bool IsHidden { get; }
+        public ISpell OriginSpell { get; }
         public IObjAiBase SourceUnit { get; }
         public IAttackableUnit TargetUnit { get; }
-        public float TimeElapsed { get; private set; }
+        
         /// <summary>
         /// Script instance for this buff. Casting to a specific buff class gives access its functions and variables.
         /// </summary>
@@ -46,20 +50,23 @@ namespace LeagueSandbox.GameServer.GameObjects
         /// </summary>
         public IToolTipData ToolTipData { get; protected set; }
 
-        public Buff(Game game, string buffName, float duration, int stacks, ISpell originSpell, IAttackableUnit onto, IObjAiBase from, bool infiniteDuration = false)
+        public Buff(Game game, string buffName, float duration, int stacks, ISpell originSpell, IAttackableUnit onto, IObjAiBase from, bool infiniteDuration = false, bool pauseBuffTimer = false)
         {
             if (duration < 0)
             {
                 throw new ArgumentException("Error: Duration was set to under 0.");
             }
 
+            IsTimerPostponed = pauseBuffTimer;
             _infiniteDuration = infiniteDuration;
             _game = game;
-            _remove = false;
+            _removed = false;
             _scriptEngine = game.ScriptEngine;
             Name = buffName;
 
             LoadScript();
+
+            BuffRemovalSource = BuffRemovalSource.NotYetRemoved;
 
             BuffAddType = BuffScript.BuffMetaData.BuffAddType;
             if (BuffAddType == (BuffAddType.STACKS_AND_RENEWS | BuffAddType.STACKS_AND_CONTINUE | BuffAddType.STACKS_AND_OVERLAPS) && BuffScript.BuffMetaData.MaxStacks < 2)
@@ -69,6 +76,7 @@ namespace LeagueSandbox.GameServer.GameObjects
 
             BuffType = BuffScript.BuffMetaData.BuffType;
             Duration = duration;
+            TimeRemaining = duration;
             IsHidden = BuffScript.BuffMetaData.IsHidden;
             if (BuffScript.BuffMetaData.MaxStacks > 254 && BuffType != BuffType.COUNTER)
             {
@@ -98,6 +106,15 @@ namespace LeagueSandbox.GameServer.GameObjects
             ToolTipData = new ToolTipData(TargetUnit, null, this);
         }
 
+        public bool PauseBuffTimer(bool pause)
+        {
+            if (!_infiniteDuration)
+            {
+                return IsTimerPostponed = pause;
+            }
+
+            return false;
+        }
         public void LoadScript()
         {
             ApiEventManager.RemoveAllListenersForOwner(BuffScript);
@@ -106,18 +123,19 @@ namespace LeagueSandbox.GameServer.GameObjects
 
         public void ActivateBuff()
         {
-            _remove = false;
+            _removed = false;
 
             BuffScript.OnActivate(TargetUnit, this, OriginSpell);
         }
 
         public void DeactivateBuff()
         {
-            if (_remove)
+            if (_removed)
             {
                 return;
             }
-            _remove = true; // To prevent infinite loop with OnDeactivate calling events
+
+            _removed = true; // To prevent infinite loop with OnDeactivate calling events
 
             BuffScript.OnDeactivate(TargetUnit, this, OriginSpell);
 
@@ -129,7 +147,7 @@ namespace LeagueSandbox.GameServer.GameObjects
 
         public bool Elapsed()
         {
-            return _remove;
+            return _removed;
         }
 
         public IStatsModifier GetStatsModifier()
@@ -180,6 +198,7 @@ namespace LeagueSandbox.GameServer.GameObjects
         public void ResetTimeElapsed()
         {
             TimeElapsed = 0;
+            TimeRemaining = Duration;
         }
 
         public void SetSlot(byte slot)
@@ -194,14 +213,38 @@ namespace LeagueSandbox.GameServer.GameObjects
                 return;
             }
 
-            TimeElapsed += diff / 1000.0f;
-            if (Math.Abs(Duration) > Extensions.COMPARE_EPSILON)
+            if (!IsTimerPostponed)
             {
-                BuffScript?.OnUpdate(diff);
-                if (TimeElapsed >= Duration)
+                TimeElapsed += diff / 1000.0f;
+                TimeRemaining = Duration / TimeElapsed;
+                if (Math.Abs(Duration) > Extensions.COMPARE_EPSILON)
                 {
-                    DeactivateBuff();
+                    BuffScript?.OnUpdate(diff);
+                    if (TimeElapsed >= Duration)
+                    {
+                        OnRemoveBuff(BuffRemovalSource.Timeout);
+                    }
                 }
+            }
+        }
+
+        public virtual void OnAddBuff() 
+        {
+            ActivateBuff();
+
+            _game.PacketNotifier.NotifyNPC_BuffAdd2(this, Duration, TimeElapsed);
+        }
+        public virtual void OnNewBuff() 
+        {
+        }
+
+        public virtual void OnRemoveBuff(BuffRemovalSource removalSource = BuffRemovalSource.Timeout)
+        {
+            DeactivateBuff();
+
+            if (!IsHidden)
+            {
+                _game.PacketNotifier.NotifyNPC_BuffRemove2(this);
             }
         }
     }

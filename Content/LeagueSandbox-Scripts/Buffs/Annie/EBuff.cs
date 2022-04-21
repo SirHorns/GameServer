@@ -14,7 +14,7 @@ namespace Buffs
     {
         public IBuffScriptMetaData BuffMetaData { get; set; } = new BuffScriptMetaData
         {
-            BuffType = BuffType.COMBAT_ENCHANCER
+            BuffType = BuffType.COMBAT_ENCHANCER,
         };
 
         public IStatsModifier StatsModifier { get; private set; } = new StatsModifier();
