@@ -767,7 +767,7 @@ namespace PacketDefinitions420
                     }
                 }
                 buffCountList = new List<KeyValuePair<byte, int>>();
-                var tempBuffs = a.GetParentBuffs();
+                var tempBuffs = a.GetRootBuffs();
 
                 for (var i = 0; i < tempBuffs.Count; i++)
                 {

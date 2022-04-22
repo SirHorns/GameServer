@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using GameServerCore.Domain;
+﻿using GameServerCore.Domain;
 using GameServerCore.Domain.GameObjects;
 using GameServerCore.Domain.GameObjects.Spell;
 using GameServerCore.Enums;
@@ -13,6 +9,10 @@ using LeagueSandbox.GameServer.GameObjects.Spell;
 using LeagueSandbox.GameServer.Logging;
 using LeagueSandbox.GameServer.Scripting.CSharp;
 using log4net;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 
 namespace LeagueSandbox.GameServer.API
 {
@@ -275,7 +275,30 @@ namespace LeagueSandbox.GameServer.API
 
             try
             {
-                buff = new BuffRenewExisting(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                buff = new Buff(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+
+                //TODO: Find a better way to handle finding the BuffAddType.
+                switch (buff.BuffAddType)
+                {
+                    case BuffAddType.RENEW_EXISTING:
+                        buff = new BuffRenewExisting(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                        break;
+                    case BuffAddType.REPLACE_EXISTING:
+                        buff = new BuffReplaceExisting(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                        break;
+                    case BuffAddType.STACKS_AND_CONTINUE:
+                        buff = new BuffStacksContinue(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                        break;
+                    case BuffAddType.STACKS_AND_OVERLAPS:
+                        buff = new BuffStacksOverlaps(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                        break;
+                    case BuffAddType.STACKS_AND_RENEWS:
+                        buff = new BuffStacksRenews(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                        break;
+                    default:
+                        buff = new Buff(_game, buffName, duration, stacks, originspell, onto, from, infiniteduration);
+                        break;
+                }
             }
             catch (ArgumentException exception)
             {

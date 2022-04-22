@@ -23,6 +23,7 @@ namespace LeagueSandbox.GameServer.GameObjects
         private readonly bool _infiniteDuration;
         private bool _removed;
         private bool IsTimerPostponed = true;
+        
 
         public BuffType BuffType { get; } /// TODO: Add comments to BuffType enum.
         public BuffAddType BuffAddType { get; }
@@ -33,10 +34,13 @@ namespace LeagueSandbox.GameServer.GameObjects
         public float TimeRemaining { get; private set; }
         public byte Slot { get; private set; }
         public bool IsHidden { get; }
+        public bool IsRootBuff { get; set; }
+        public  IBuff RootBuff { get; set; }
         public ISpell OriginSpell { get; }
         public IObjAiBase SourceUnit { get; }
         public IAttackableUnit TargetUnit { get; }
-        
+        public List<IBuff> StackList { get; private set; }
+
         /// <summary>
         /// Script instance for this buff. Casting to a specific buff class gives access its functions and variables.
         /// </summary>
@@ -61,6 +65,7 @@ namespace LeagueSandbox.GameServer.GameObjects
             _infiniteDuration = infiniteDuration;
             _game = game;
             _removed = false;
+            IsRootBuff = false;
             _scriptEngine = game.ScriptEngine;
             Name = buffName;
 
@@ -87,34 +92,20 @@ namespace LeagueSandbox.GameServer.GameObjects
                 MaxStacks = Math.Min(BuffScript.BuffMetaData.MaxStacks, int.MaxValue);
             }
             OriginSpell = originSpell;
-            if (onto.HasBuff(Name) && BuffAddType == BuffAddType.STACKS_AND_OVERLAPS)
-            {
-                // Put parent buff data into children buffs
-                StackCount = onto.GetBuffWithName(Name).StackCount;
-                Slot = onto.GetBuffWithName(Name).Slot;
-            }
-            else
-            {
-                StackCount = stacks;
-                Slot = onto.GetNewBuffSlot(this);
-            }
+
+            StackCount = stacks;
+            Slot = onto.GetNewBuffSlot(this);
+
             SourceUnit = from;
             TimeElapsed = 0;
             TargetUnit = onto;
             StatusEffects = new Dictionary<StatusFlags, bool>();
 
             ToolTipData = new ToolTipData(TargetUnit, null, this);
+
+            StackList = new List<IBuff>();
         }
 
-        public bool PauseBuffTimer(bool pause)
-        {
-            if (!_infiniteDuration)
-            {
-                return IsTimerPostponed = pause;
-            }
-
-            return false;
-        }
         public void LoadScript()
         {
             ApiEventManager.RemoveAllListenersForOwner(BuffScript);
@@ -206,6 +197,29 @@ namespace LeagueSandbox.GameServer.GameObjects
             Slot = slot;
         }
 
+        public void SetIsRootBuff(bool root)
+        {
+            IsRootBuff = root;
+        }
+
+        public void SetStackList(List<IBuff> buffStackLsit)
+        {
+            StackList = buffStackLsit;
+        }
+
+        public void AddBuffStackList(IBuff b)
+        {
+            StackList.Add(b);
+        }
+        public void RemoveBuffStackList(IBuff b)
+        {
+            StackList.Remove(b);
+        }
+        public void RemoveBuffStackList(int slot = 0)
+        {
+            StackList.RemoveAt(slot);
+        }
+
         public void Update(float diff)
         {
             if (_infiniteDuration)
@@ -213,31 +227,30 @@ namespace LeagueSandbox.GameServer.GameObjects
                 return;
             }
 
-            if (!IsTimerPostponed)
+            TimeElapsed += diff / 1000.0f;
+            Console.WriteLine(TimeElapsed);
+            TimeRemaining = Duration / TimeElapsed;
+            if (Math.Abs(Duration) > Extensions.COMPARE_EPSILON)
             {
-                TimeElapsed += diff / 1000.0f;
-                TimeRemaining = Duration / TimeElapsed;
-                if (Math.Abs(Duration) > Extensions.COMPARE_EPSILON)
+                BuffScript?.OnUpdate(diff);
+                if (TimeElapsed >= Duration)
                 {
-                    BuffScript?.OnUpdate(diff);
-                    if (TimeElapsed >= Duration)
-                    {
-                        OnRemoveBuff(BuffRemovalSource.Timeout);
-                    }
+                    OnRemoveBuff(BuffRemovalSource.Timeout);
                 }
             }
         }
 
         public virtual void OnAddBuff() 
         {
-            ActivateBuff();
+            TargetUnit.AddToBuffList(this);
 
+            ActivateBuff();
+            
             _game.PacketNotifier.NotifyNPC_BuffAdd2(this, Duration, TimeElapsed);
         }
-        public virtual void OnNewBuff() 
+        public virtual void OnNewBuff(IBuff b) 
         {
         }
-
         public virtual void OnRemoveBuff(BuffRemovalSource removalSource = BuffRemovalSource.Timeout)
         {
             DeactivateBuff();

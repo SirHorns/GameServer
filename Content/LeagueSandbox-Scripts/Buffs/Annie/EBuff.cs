@@ -15,6 +15,7 @@ namespace Buffs
         public IBuffScriptMetaData BuffMetaData { get; set; } = new BuffScriptMetaData
         {
             BuffType = BuffType.COMBAT_ENCHANCER,
+            MaxStacks = 5,
         };
 
         public IStatsModifier StatsModifier { get; private set; } = new StatsModifier();

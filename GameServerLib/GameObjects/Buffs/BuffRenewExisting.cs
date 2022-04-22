@@ -38,12 +38,19 @@ namespace LeagueSandbox.GameServer.GameObjects
 
         public override void OnAddBuff()
         {
-            _game.PacketNotifier.NotifyNPC_BuffAdd2(this, Duration, TimeElapsed);
+            IsRootBuff = true;
+            TargetUnit.AddRootBuffInstance(this);
+            TargetUnit.AddToBuffList(this);
+            
 
             ActivateBuff();
+
+            _game.PacketNotifier.NotifyNPC_BuffAdd2(this, Duration, TimeElapsed);
         }
-        public override void OnNewBuff()
+        public override void OnNewBuff(IBuff b)
         {
+            TargetUnit.RemoveBuffSlot(b);
+
             ResetTimeElapsed();
 
             if (!IsHidden)
@@ -54,6 +61,8 @@ namespace LeagueSandbox.GameServer.GameObjects
 
         public override void OnRemoveBuff(BuffRemovalSource removalSource = BuffRemovalSource.Timeout)
         {
+            TargetUnit.RemoveRootBuffInstance(this);
+
             DeactivateBuff();
 
             if (!IsHidden)

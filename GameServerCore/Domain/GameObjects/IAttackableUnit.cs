@@ -146,6 +146,17 @@ namespace GameServerCore.Domain.GameObjects
         /// TODO: Implement model verification so that clients don't crash if a model which doesn't exist in client files is given.
         bool ChangeModel(string model);
         /// <summary>
+        /// Adds the given buff instance from the buff list of this unit.
+        /// Called automatically by RemoveBuff().
+        /// </summary>
+        /// <param name="b">Buff instance to check for.</param>
+        public void AddToBuffList(IBuff b);
+        /// <summary>
+        /// Removes the given buff instance from the buff list of this unit.
+        /// </summary>
+        /// <param name="b">Buff instance to check for.</param>
+        public void RemoveFromBuffList(IBuff b);
+        /// <summary>
         /// Adds the given buff instance to this unit.
         /// </summary>
         /// <param name="b">Buff instance to add.</param>
@@ -176,32 +187,43 @@ namespace GameServerCore.Domain.GameObjects
         /// <returns>Byte buff slot of the given buff.</returns>
         byte GetNewBuffSlot(IBuff b);
         /// <summary>
-        /// Gets the parent buff instance of the buffs of the given name. Parent buffs control stack count for buffs of the same name.
+        /// Gets the parent buff instance of the buffs of the given name. Root buffs control stack count for buffs of the same name.
         /// </summary>
         /// <param name="name">Internal buff name to check.</param>
         /// <returns>Parent buff instance.</returns>
-        IBuff GetBuffWithName(string name);
+        public IBuff GetBuffWithName(string name);
         /// <summary>
-        /// Gets a dictionary of all parent buff instances and their names.
-        /// </summary>
-        /// <returns></returns>
-        Dictionary<string, IBuff> GetParentBuffs();
-        /// <summary>
-        /// Gets a list of all buffs applied to this unit (parent and children).
+        /// Gets a list of all buffs applied to this unit.
         /// </summary>
         /// <returns>List of buff instances.</returns>
         List<IBuff> GetBuffs();
         /// <summary>
-        /// Gets the number of parent buffs applied to this unit.
+        /// Gets the number of buffs applied to this unit.
         /// </summary>
-        /// <returns>Number of parent buffs.</returns>
+        /// <returns>Number of buffs.</returns>
         public int GetBuffsCount();
         /// <summary>
-        /// Gets a list of all buff instances of the given name (parent and children).
+        /// Gets a list of all buff instances of the given name.
         /// </summary>
         /// <param name="buffName">Internal buff name to check.</param>
         /// <returns>List of buff instances.</returns>
         List<IBuff> GetBuffsWithName(string buffName);
+        /// <summary>
+        /// Gets the Dictionary of Root Buffs applied to this unit.
+        /// </summary>
+        /// <returns>List of buff instances.</returns>
+        Dictionary<string, IBuff> GetRootBuffs();
+        /// <summary>
+        /// Replaces the buff in the given slot with the given buff.
+        /// </summary>
+        /// <returns>List of buff instances.</returns>
+        void ReplaceBuffSlot(int slot, IBuff b);
+        /// <summary>
+        /// Removes the given buff instance from the buff slots of this unit.
+        /// Called automatically by RemoveBuff().
+        /// </summary>
+        /// <param name="b">Buff instance to check for.</param>
+        void RemoveBuffSlot(IBuff b);
         /// <summary>
         /// Removes the given buff from this unit. Called automatically when buff timers have finished.
         /// Buffs with BuffAddType.STACKS_AND_OVERLAPS are removed incrementally, meaning one instance removed per RemoveBuff call.
@@ -286,5 +308,8 @@ namespace GameServerCore.Domain.GameObjects
         /// First string is the animation to override, second string is the animation to play in place of the first.
         /// <param name="animPairs">Dictionary of animations to set.</param>
         void SetAnimStates(Dictionary<string, string> animPairs);
+
+        void AddRootBuffInstance(IBuff buff);
+        void RemoveRootBuffInstance(IBuff buff);
     }
 }

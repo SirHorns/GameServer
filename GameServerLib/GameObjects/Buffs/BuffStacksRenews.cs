@@ -17,11 +17,11 @@ namespace LeagueSandbox.GameServer.GameObjects
     /// <summary>
     /// This Buff Type will just renew itself when a buff of the same type is added to a unit that already has the same buff instance applied.
     /// </summary>
-    public class BuffReplaceExisting : Buff, IBuff
+    public class BuffStacksRenews : Buff, IBuff
     {
         private readonly Game _game;
 
-        public BuffReplaceExisting(
+        public BuffStacksRenews(
             Game game,
             string buffName,
             float duration,
@@ -34,6 +34,7 @@ namespace LeagueSandbox.GameServer.GameObjects
             ) : base(game, buffName, duration, stacks, originSpell, onto, from, infiniteDuration, pauseBuffTimer)
         {
             _game = game;
+            IsRootBuff = true;
         }
 
         public override void OnAddBuff()
@@ -43,36 +44,65 @@ namespace LeagueSandbox.GameServer.GameObjects
 
             TargetUnit.AddToBuffList(this);
 
+            if (!IsHidden)
+            {
+                _game.PacketNotifier.NotifyNPC_BuffAdd2(this, Duration, TimeElapsed);
+            }
+            
             ActivateBuff();
-
-            _game.PacketNotifier.NotifyNPC_BuffAdd2(this, Duration, TimeElapsed);
         }
         public override void OnNewBuff(IBuff b)
         {
-            TargetUnit.RemoveFromBuffList(this);
+            // Don't need the newly added buff instance as we already have a parent who we can add stacks to.
             TargetUnit.RemoveBuffSlot(b);
 
-            OnRemoveBuff(BuffRemovalSource.Replaced);
+            // Refresh the time of the parent buff and adds a stack if Max Stacks wasn't reached.
+            ResetTimeElapsed();
 
-            TargetUnit.GetBuffs()[Slot] = b;
-            b.SetSlot(Slot);
-            TargetUnit.AddToBuffList(b);   
+            if (IncrementStackCount())
+            {
+                ActivateBuff();
+            }
 
             if (!IsHidden)
             {
-                _game.PacketNotifier.NotifyNPC_BuffReplace(this);
+                if (BuffType == BuffType.COUNTER)
+                {
+                    //_game.PacketNotifier .PacketNotifier.NotifyNPC_BuffUpdateNumCounter(this);
+                }
+                else
+                {
+                    //_game.PacketNotifier.NotifyNPC_BuffUpdateCount(this, Duration, TimeElapsed);
+                }
             }
+            // TODO: Unload and reload all data of buff script here.
         }
 
         public override void OnRemoveBuff(BuffRemovalSource removalSource = BuffRemovalSource.Timeout)
         {
-            TargetUnit.RemoveRootBuffInstance(this);
+            if (!IsRootBuff)
+            {
+                RootBuff.OnRemoveBuff();
+                return;
+            }
 
-            DeactivateBuff();
+            if (StackCount <= 1)
+            {
+                DeactivateBuff();
+                TargetUnit.RemoveRootBuffInstance(this);
+                TargetUnit.RemoveBuffSlot(this);
+                if (!IsHidden)
+                {
+                    _game.PacketNotifier.NotifyNPC_BuffRemove2(this);
+                }
+                return;
+            }
+
+            DecrementStackCount();
 
             if (!IsHidden)
             {
-                _game.PacketNotifier.NotifyNPC_BuffRemove2(this);
+                _game.PacketNotifier.NotifyNPC_BuffUpdateCount(this, Duration - TimeElapsed, TimeElapsed);
             }
         }
     }

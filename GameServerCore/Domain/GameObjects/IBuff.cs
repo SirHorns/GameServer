@@ -44,6 +44,14 @@ namespace GameServerCore.Domain.GameObjects
         /// </summary>
         bool IsHidden { get; }
         /// <summary>
+        /// Whether this buff is the root buff in a stack of buffs.
+        /// </summary>
+        bool IsRootBuff { get; }
+        /// <summary>
+        /// The root buff this buff belongs to as a part of a stack. (Uses to refrence back to if this buff is accidently called intead of the root buff.)
+        /// </summary>
+        IBuff RootBuff { get; set; }
+        /// <summary>
         /// Spell which caused this buff to be applied.
         /// </summary>
         ISpell OriginSpell { get; }
@@ -67,6 +75,10 @@ namespace GameServerCore.Domain.GameObjects
         /// Used to update player buff tool tip values.
         /// </summary>
         IToolTipData ToolTipData { get; }
+        /// <summary>
+        /// List of buffs related to a stack.(Excluding itself);
+        /// </summary>
+        List<IBuff> StackList { get; }
 
         /// <summary>
         /// Used to load the script for the buff.
@@ -82,8 +94,13 @@ namespace GameServerCore.Domain.GameObjects
         void ResetTimeElapsed();
         void SetSlot(byte slot);
         void SetToolTipVar<T>(int tipIndex, T value) where T : struct;
+        void SetIsRootBuff(bool root);
+        public void SetStackList(List<IBuff> buffStackLsit);
+        public void AddBuffStackList(IBuff b);
+        public void RemoveBuffStackList(IBuff b);
+        public void RemoveBuffStackList(int slot = 0);
         virtual void OnAddBuff() { }
-        virtual void OnNewBuff() { }
+        virtual void OnNewBuff(IBuff b) { }
         virtual void OnRemoveBuff() { }
     }
 }

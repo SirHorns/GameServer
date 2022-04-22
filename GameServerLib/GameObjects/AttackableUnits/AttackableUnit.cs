@@ -69,15 +69,14 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         /// TODO: Move to AttackableUnit.
         private IBuff[] BuffSlots { get; }
         /// <summary>
-        /// Dictionary containing all parent buffs (oldest buff of a given name). Used for packets and assigning stacks if a buff of the same name is added.
-        /// </summary>
-        /// TODO: Move to AttackableUnit.
-        private Dictionary<string, IBuff> ParentBuffs { get; }
-        /// <summary>
         /// List of all buffs applied to this AI. Used for easier indexing of buffs.
         /// </summary>
         /// TODO: Verify if we can remove this in favor of BuffSlots while keeping the functions which allow for easy accessing of individual buff instances.
         private List<IBuff> BuffList { get; }
+        /// <summary>
+        /// Dictionary of Unique Buff Instances. (Purely a Reference for ConstructEnterVisibilityClientPacket in PacketNotifier)
+        /// </summary>
+        private Dictionary<string, IBuff> RootBuffs { get; set; }
         /// <summary>
         /// Waypoints that make up the path a game object is walking in.
         /// </summary>
@@ -118,8 +117,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
             _buffsLock = new object();
             BuffSlots = new IBuff[256];
-            ParentBuffs = new Dictionary<string, IBuff>();
             BuffList = new List<IBuff>();
+            RootBuffs = new Dictionary<string, IBuff>();
         }
 
         public override void OnAdded()
@@ -1176,6 +1175,19 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         {
             _movementUpdated = false;
         }
+        public void AddRootBuffInstance(IBuff buff)
+        {
+            if(RootBuffs.ContainsKey(buff.Name))
+            {
+                return;
+            }
+
+            RootBuffs.Add(buff.Name, buff);
+        }
+        public void RemoveRootBuffInstance(IBuff buff)
+        {
+            RootBuffs.Remove(buff.Name);
+        }
 
         /// <summary>
         /// Adds the given buff instance to this unit.
@@ -1186,172 +1198,17 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         {
             if (ApiEventManager.OnAllowAddBuff.Publish(this, b.SourceUnit, b))
             {
-                // If this is the first buff of this name to be added, then add it to the parent buffs list (regardless of its add type).
-                if (!ParentBuffs.ContainsKey(b.Name))
+                if (RootBuffs.ContainsKey(b.Name))
                 {
-                    // If the parent buff has ended, make the next oldest buff the parent buff.
-                    if (HasBuff(b.Name))
-                    {
-                        var buff = GetBuffsWithName(b.Name)[0];
-                        ParentBuffs.Add(b.Name, buff);
-                        return;
-                    }
-                    // If there is no other buffs of this name, make it the parent and add it normally.
-                    ParentBuffs.Add(b.Name, b);
-                    BuffList.Add(b);
-                    // Add the buff to the visual hud.
-                    ParentBuffs[b.Name].OnAddBuff();
+                    RootBuffs[b.Name].OnNewBuff(b);
 
+                    return;
                 }
-                // If the buff is supposed to replace any existing buff instances of the same name
-                else if (b.BuffAddType == BuffAddType.REPLACE_EXISTING)
-                {
-                    // Removing the previous buff of the same name.
-                    var prevbuff = ParentBuffs[b.Name];
 
-                    ParentBuffs[b.Name].OnNewBuff();
+                BuffList.Add(b);
 
-                    RemoveBuff(b.Name, false);
-
-                    // Clear the newly given buff's slot since we will move it into the previous buff's slot.
-                    RemoveBuffSlot(b);
-
-                    // Adding the newly given buff instance into the slot of the previous buff.
-                    BuffSlots[prevbuff.Slot] = b;
-                    b.SetSlot(prevbuff.Slot);
-
-                    // Add the buff as a parent and normally.
-                    ParentBuffs.Add(b.Name, b);
-                    BuffList.Add(b);
-                }
-                else if (b.BuffAddType == BuffAddType.RENEW_EXISTING)
-                {
-                    // Clear the newly created buff's slot so we aren't wasting slots.
-                    if (b != ParentBuffs[b.Name])
-                    {
-                        RemoveBuffSlot(b);
-                    }
-
-                    // Reset the already existing buff's timer.
-                    ParentBuffs[b.Name].OnNewBuff();
-                }
-                // If the buff is supposed to be a single stackable buff with a timer = Duration * StackCount
-                else if (b.BuffAddType == BuffAddType.STACKS_AND_CONTINUE)
-                {
-                    // If we've hit the max stacks count for this buff add type
-                    if (ParentBuffs[b.Name].StackCount >= ParentBuffs[b.Name].MaxStacks)
-                    {
-                        ParentBuffs[b.Name].ResetTimeElapsed();
-
-                        if (!b.IsHidden)
-                        {
-                            // If the buff is a counter buff (ex: Nasus Q stacks), then use a packet specialized for big buff stack counts (int.MaxValue).
-                            if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
-                            {
-                                _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
-                            }
-                            // Otherwise, use the normal buff stack (254) update (usually just adds one to the number on the icon and refreshes the time of the icon).
-                            else
-                            {
-                                _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
-                            }
-                        }
-
-                        return;
-                    }
-
-                    ParentBuffs[b.Name].IncrementStackCount();
-
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration - ParentBuffs[b.Name].TimeElapsed, ParentBuffs[b.Name].TimeElapsed);
-                    }
-                }
-                // If the buff is supposed to be applied alongside any existing buff instances of the same name.
-                else if (b.BuffAddType == BuffAddType.STACKS_AND_OVERLAPS)
-                {
-                    // If we've hit the max stacks count for this buff add type (usually 254 for this BuffAddType).
-                    if (ParentBuffs[b.Name].StackCount >= ParentBuffs[b.Name].MaxStacks)
-                    {
-                        // Get and remove the oldest buff of the same name so we can free up space for the newly given buff instance.
-                        var oldestbuff = ParentBuffs[b.Name];
-
-                        oldestbuff.DeactivateBuff();
-                        RemoveBuff(b.Name, true);
-
-                        // Move the next oldest buff of the same name into the position of the removed oldest buff.
-                        var tempbuffs = GetBuffsWithName(b.Name);
-
-                        BuffSlots[oldestbuff.Slot] = tempbuffs[0];
-                        ParentBuffs.Add(oldestbuff.Name, tempbuffs[0]);
-                        BuffList.Add(b);
-
-                        if (!b.IsHidden)
-                        {
-                            // If the buff is a counter buff (ex: Nasus Q stacks), then use a packet specialized for big buff stack counts (int.MaxValue).
-                            if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
-                            {
-                                _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
-                            }
-                            // Otherwise, use the normal buff stack (254) update (usually just adds one to the number on the icon and refreshes the time of the icon).
-                            else
-                            {
-                                _game.PacketNotifier.NotifyNPC_BuffUpdateCount(b, b.Duration, b.TimeElapsed);
-                            }
-                        }
-                        b.ActivateBuff();
-
-                        return;
-                    }
-                    // If we haven't hit the max stack count (usually 254).
-                    BuffList.Add(b);
-
-                    // Increment the number of stacks on the parent buff, which is the buff instance which is used for packets.
-                    ParentBuffs[b.Name].IncrementStackCount();
-
-                    // Increment the number of stacks on every buff of the same name (so if any of them become the parent, there is no problem).
-                    GetBuffsWithName(b.Name).ForEach(buff => buff.SetStacks(ParentBuffs[b.Name].StackCount));
-
-                    if (!b.IsHidden)
-                    {
-                        if (b.BuffType == BuffType.COUNTER)
-                        {
-                            _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
-                        }
-                        else
-                        {
-                            _game.PacketNotifier.NotifyNPC_BuffUpdateCount(b, b.Duration, b.TimeElapsed);
-                        }
-                    }
-                    b.ActivateBuff();
-                }
-                // If the buff is supposed to add a stack to any existing buffs of the same name and refresh their timer.
-                // Essentially the method is: have one parent buff which has the stacks, and just refresh its time, this means no overlapping buff instances, but functionally it is the same.
-                else if (ParentBuffs[b.Name].BuffAddType == BuffAddType.STACKS_AND_RENEWS)
-                {
-                    // Don't need the newly added buff instance as we already have a parent who we can add stacks to.
-                    RemoveBuffSlot(b);
-
-                    // Refresh the time of the parent buff and adds a stack if Max Stacks wasn't reached.
-                    ParentBuffs[b.Name].ResetTimeElapsed();
-                    if (ParentBuffs[b.Name].IncrementStackCount())
-                    {
-                        ParentBuffs[b.Name].ActivateBuff();
-                    }
-
-                    if (!b.IsHidden)
-                    {
-                        if (ParentBuffs[b.Name].BuffType == BuffType.COUNTER)
-                        {
-                            _game.PacketNotifier.NotifyNPC_BuffUpdateNumCounter(ParentBuffs[b.Name]);
-                        }
-                        else
-                        {
-                            _game.PacketNotifier.NotifyNPC_BuffUpdateCount(ParentBuffs[b.Name], ParentBuffs[b.Name].Duration, ParentBuffs[b.Name].TimeElapsed);
-                        }
-                    }
-                    // TODO: Unload and reload all data of buff script here.
-                }
+                _game.PacketNotifier.NotifyNPC_BuffAdd2(b);
+                b.OnAddBuff();
             }    
         }
 
@@ -1429,18 +1286,17 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
             throw new Exception("No slot found with requested value"); // If no open slot or no corresponding slot
         }
-
         /// <summary>
-        /// Gets the list of parent buffs applied to this unit.
+        /// Replaces the buff in the given slot with the given buff.
         /// </summary>
-        /// <returns>List of parent buffs.</returns>
-        public Dictionary<string, IBuff> GetParentBuffs()
+        /// <param name="slot">Slot to be replaced</param>
+        /// <param name="buff">Buff to place in the slot</param>
+        public void ReplaceBuffSlot(int slot, IBuff buff)
         {
-            return ParentBuffs;
+            BuffSlots[slot] = buff;
         }
-
         /// <summary>
-        /// Gets the parent buff instance of the buffs of the given name. Parent buffs control stack count for buffs of the same name.
+        /// Gets the parent buff instance of the buffs of the given name. Root buffs control stack count for buffs of the same name.
         /// </summary>
         /// <param name="name">Internal buff name to check.</param>
         /// <returns>Parent buff instance.</returns>
@@ -1448,16 +1304,16 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         {
             lock (_buffsLock)
             {
-                if (ParentBuffs.ContainsKey(name))
+                if (RootBuffs.ContainsKey(name))
                 {
-                    return ParentBuffs[name];
+                    return RootBuffs[name];
                 }
                 return null;
             }
         }
 
         /// <summary>
-        /// Gets a list of all buffs applied to this unit (parent and children).
+        /// Gets a list of all buffs applied to this unit.
         /// </summary>
         /// <returns>List of buff instances.</returns>
         public List<IBuff> GetBuffs()
@@ -1466,16 +1322,16 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         }
 
         /// <summary>
-        /// Gets the number of parent buffs applied to this unit.
+        /// Gets the number of buffs applied to this unit.
         /// </summary>
-        /// <returns>Number of parent buffs.</returns>
+        /// <returns>Number of buffs.</returns>
         public int GetBuffsCount()
         {
-            return ParentBuffs.Count;
+            return BuffList.Count;
         }
 
         /// <summary>
-        /// Gets a list of all buff instances of the given name (parent and children).
+        /// Gets a list of all buff instances of the given name.
         /// </summary>
         /// <param name="buffName">Internal buff name to check.</param>
         /// <returns>List of buff instances.</returns>
@@ -1487,6 +1343,10 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             }
         }
 
+        public Dictionary<string, IBuff> GetRootBuffs()
+        {
+            return RootBuffs;
+        }
         /// <summary>
         /// Removes the given buff from this unit. Called automatically when buff timers have finished.
         /// </summary>
@@ -1500,44 +1360,13 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
             lock (_buffsLock)
             {
-                // If the buff is supposed to be a single stackable buff with a timer = Duration * StackCount, and their are more than one already present.
-                if (b.BuffAddType == BuffAddType.STACKS_AND_CONTINUE && b.StackCount > 1)
-                {
-                    b.DecrementStackCount();
+                BuffList.RemoveAll(buff => buff.Elapsed());
+                b.OnRemoveBuff();
+                
 
-                    IBuff tempBuff = new Buff(_game, b.Name, b.Duration, b.StackCount, b.OriginSpell, b.TargetUnit, b.SourceUnit, b.IsBuffInfinite());
-
-                    RemoveBuff(b.Name, true);
-
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffRemove2(b);
-                    }
-
-                    // Next oldest buff takes the place of the removed oldest buff; becomes parent buff.
-                    BuffSlots[b.Slot] = tempBuff;
-                    ParentBuffs.Add(b.Name, tempBuff);
-                    BuffList.Add(tempBuff);
-
-                    // Add the buff to the visual hud.
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffAdd2(tempBuff, tempBuff.Duration, tempBuff.TimeElapsed);
-                    }
-                    // Activate the buff for BuffScripts
-                    tempBuff.ActivateBuff();
-                }
-                else if (b.BuffAddType == BuffAddType.STACKS_AND_RENEWS && b.StackCount > 1 && !b.Elapsed())
-                {
-                    b.DecrementStackCount();
-
-                    if (!b.IsHidden)
-                    {
-                        _game.PacketNotifier.NotifyNPC_BuffUpdateCount(b, b.Duration - b.TimeElapsed, b.TimeElapsed);
-                    }
-                }
+                /*
                 // If the buff is supposed to be applied alongside other buffs of the same name, and their are more than one already present.
-                else if (b.BuffAddType == BuffAddType.STACKS_AND_OVERLAPS && b.StackCount > 1)
+                if (b.BuffAddType == BuffAddType.STACKS_AND_OVERLAPS && b.StackCount > 1)
                 {
                     // Remove one stack and update the other buff instances of the same name
                     b.DecrementStackCount();
@@ -1576,42 +1405,36 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                         }
                     }
                 }
-                // Only other case where RemoveBuff should be called is when there is one stack remaining on the buff.
-                else
-                {
-                    ParentBuffs[b.Name].OnRemoveBuff();
-                    RemoveBuff(b.Name, true);
-                    BuffList.RemoveAll(buff => buff.Elapsed());
-                }
+
+                */
             }
         }
-
+        /// <summary>
+        /// Adds the given buff instance from the buff list of this unit.
+        /// Called automatically by RemoveBuff().
+        /// </summary>
+        /// <param name="b">Buff instance to check for.</param>
+        public void AddToBuffList(IBuff b)
+        {
+            BuffList.Add(b);
+        }
+        /// <summary>
+        /// Removes the given buff instance from the buff list of this unit.
+        /// </summary>
+        /// <param name="b">Buff instance to check for.</param>
+        public void RemoveFromBuffList(IBuff b)
+        {
+            BuffList.Remove(b);
+        }
         /// <summary>
         /// Removes the given buff instance from the buff slots of this unit.
         /// Called automatically by RemoveBuff().
         /// </summary>
         /// <param name="b">Buff instance to check for.</param>
-        private void RemoveBuffSlot(IBuff b)
+        public void RemoveBuffSlot(IBuff b)
         {
             var slot = GetBuffSlot(b);
             BuffSlots[slot] = null;
-        }
-
-        /// <summary>
-        /// Removes the parent buff of the given internal name from this unit.
-        /// </summary>
-        /// <param name="b">Internal buff name to remove.</param>
-        private void RemoveBuff(string b, bool removeSlot)
-        {
-            if (removeSlot && ParentBuffs[b] != null)
-            {
-                RemoveBuffSlot(ParentBuffs[b]);
-            }
-            lock (_buffsLock)
-            {
-                BuffList.Remove(ParentBuffs[b]);
-                ParentBuffs.Remove(b);
-            }
         }
 
         /// <summary>
@@ -1623,9 +1446,9 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         {
             lock (_buffsLock)
             {
-                BuffList.FindAll(b =>
-                b.IsBuffSame(buffName)).ForEach(b =>
-                b.DeactivateBuff());
+                BuffList
+                    .FindAll(b => b.IsBuffSame(buffName))
+                    .ForEach(b => b.DeactivateBuff());
             }
         }
 
