@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using GameMaths.Geometry.Polygons;
 using GameServerCore.Domain;
 using GameServerCore.Domain.GameObjects;
 using GameServerCore.Domain.GameObjects.Spell;
@@ -10,10 +9,7 @@ using GameServerCore.Enums;
 using GameServerCore.Scripting.CSharp;
 using GameServerLib.GameObjects.AttackableUnits;
 using LeagueSandbox.GameServer.API;
-using LeagueSandbox.GameServer.Content;
-using LeagueSandbox.GameServer.GameObjects.Spell;
-using LeagueSandbox.GameServer.GameObjects.Spell.Missile;
-using LeagueSandbox.GameServer.Items;
+using LeagueSandbox.GameServer.Inventory;
 using LeagueSandbox.GameServer.Scripting.CSharp;
 using System.Activities.Presentation.View;
 
@@ -30,9 +26,10 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         private bool _skipNextAutoAttack;
         private ISpell _castingSpell;
         private Random _random = new Random();
-        private readonly CSharpScriptEngine _charScriptEngine;
         protected ItemManager _itemManager;
+        protected AIState _aiState = AIState.AI_IDLE;
         protected bool _aiPaused;
+        protected IPet _lastPetSpawned;
 
         /// <summary>
         /// Variable storing all the data related to this AI's current auto attack. *NOTE*: Will be deprecated as the spells system gets finished.
@@ -99,8 +96,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             SkinID = skinId;
 
             stats.LoadStats(CharData);
-
-            _charScriptEngine = game.ScriptEngine;
 
             // TODO: Centralize this instead of letting it lay in the initialization.
             if (collisionRadius > 0)
@@ -250,7 +245,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         /// </summary>
         public void LoadCharScript(ISpell spell = null)
         {
-            CharScript = _charScriptEngine.CreateObject<ICharScript>("CharScripts", $"CharScript{Model}") ?? new CharScriptEmpty();
+            CharScript = CSharpScriptEngine.CreateObjectStatic<ICharScript>("CharScripts", $"CharScript{Model}") ?? new CharScriptEmpty();
         }
 
         /// <summary>
@@ -358,6 +353,15 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         public bool CanLevelUpSpell(ISpell s)
         {
             return CharData.SpellsUpLevels[s.CastInfo.SpellSlot][s.CastInfo.SpellLevel] <= Stats.Level;
+        }
+
+        public virtual bool LevelUp(bool force = true)
+        {
+            Stats.LevelUp();
+            _game.PacketNotifier.NotifyNPC_LevelUp(this);
+            _game.PacketNotifier.NotifyOnReplication(this, partial: false);
+            ApiEventManager.OnLevelUp.Publish(this);
+            return true;
         }
 
         /// <summary>
@@ -658,7 +662,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                 {
                     if (Vector2.DistanceSquared(Position, targetPos) <= idealRange * idealRange)
                     {
-                        UpdateMoveOrder(OrderType.Stop, true);
+                        UpdateMoveOrder(OrderType.Hold, true);
                     }
                     else
                     {
@@ -668,7 +672,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                         }
 
                         var newWaypoints = _game.Map.PathingHandler.GetPath(Position, targetPos);
-                        if (newWaypoints.Count > 1)
+                        if (newWaypoints != null && newWaypoints.Count > 1)
                         {
                             SetWaypoints(newWaypoints);
                         }
@@ -828,18 +832,37 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                 return null;
             }
 
-            ISpell newSpell = new Spell.Spell(_game, this, name, slot);
-            ISpell existingSpell = Spells[slot];
+            ISpell toReturn = Spells[slot];
 
-            if (existingSpell != null)
+            if (name != Spells[slot].SpellName)
             {
-                Spells[slot].Deactivate();
+                // Use any existing spells before making a new one.
+                bool exists = false;
+                foreach (var spell in Spells.Values)
+                {
+                    if (spell.SpellName == name)
+                    {
+                        toReturn = spell;
+                        exists = true;
+                        break;
+                    }
+                }
+
+                if (!exists)
+                {
+                    toReturn = new Spell.Spell(_game, this, name, slot);
+
+                    if (Spells[slot] != null)
+                    {
+                        Spells[slot].Deactivate();
+                    }
+
+                    toReturn.SetLevel(Spells[slot].CastInfo.SpellLevel);
+                }
+
+                Spells[slot] = toReturn;
+                Stats.SetSpellEnabled(slot, enabled);
             }
-
-            newSpell.SetLevel(Spells[slot].CastInfo.SpellLevel);
-
-            Spells[slot] = newSpell;
-            Stats.SetSpellEnabled(slot, enabled);
 
             if (this is IChampion champion)
             {
@@ -852,7 +875,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                 }
             }
 
-            return newSpell;
+            return toReturn;
         }
 
         /// <summary>
@@ -919,12 +942,42 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         }
 
         /// <summary>
+        /// Forces this unit to stop targeting the given unit.
+        /// Applies to attacks, spell casts, spell channels, and any queued spell casts.
+        /// </summary>
+        /// <param name="target"></param>
+        public void Untarget(IAttackableUnit target)
+        {
+            if (TargetUnit == target)
+            {
+                SetTargetUnit(null, true);
+            }
+
+            if (_castingSpell != null)
+            {
+                _castingSpell.RemoveTarget(target);
+            }
+            if (ChannelSpell != null)
+            {
+                ChannelSpell.RemoveTarget(target);
+            }
+            if (SpellToCast != null)
+            {
+                SpellToCast.RemoveTarget(target);
+            }
+        }
+
+        /// <summary>
         /// Sets this AI's current target unit. This relates to both auto attacks as well as general spell targeting.
         /// </summary>
         /// <param name="target">Unit to target.</param>
-        /// TODO: Remove Target class.
         public void SetTargetUnit(IAttackableUnit target, bool networked = false)
         {
+            if (target == null && TargetUnit != null)
+            {
+                ApiEventManager.OnTargetLost.Publish(this, TargetUnit);
+            }
+
             TargetUnit = target;
 
             if (networked)
@@ -992,6 +1045,22 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             }
         }
 
+        /// <summary>
+        /// Gets the most recently spawned Pet unit which is owned by this unit.
+        /// </summary>
+        public IPet GetPet()
+        {
+            return _lastPetSpawned;
+        }
+
+        /// <summary>
+        /// Sets the most recently spawned Pet unit which is owned by this unit.
+        /// </summary>
+        public void SetPet(IPet pet)
+        {
+            _lastPetSpawned = pet;
+        }
+
         public override void Update(float diff)
         {
             base.Update(diff);
@@ -1007,7 +1076,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                 s.Update(diff);
             }
 
-            if(Inventory != null)
+            if (Inventory != null)
             {
                 Inventory.OnUpdate(diff);
             }
@@ -1017,6 +1086,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             if (_autoAttackCurrentCooldown > 0)
             {
                 _autoAttackCurrentCooldown -= diff / 1000.0f;
+            }
+
+            if (_lastPetSpawned != null && _lastPetSpawned.IsDead)
+            {
+                SetPet(null);
             }
         }
 
@@ -1071,12 +1145,12 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             }
             else if (TargetUnit == null)
             {
-                if (IsAttacking && !AutoAttackSpell.SpellData.CantCancelWhileWindingUp)
+                if ((IsAttacking && !AutoAttackSpell.SpellData.CantCancelWhileWindingUp) || HasMadeInitialAttack)
                 {
                     CancelAutoAttack(!HasAutoAttacked, true);
                 }
             }
-            else if (TargetUnit.IsDead || !TargetUnit.Status.HasFlag(StatusFlags.Targetable) || !TargetUnit.IsVisibleByTeam(Team))
+            else if (TargetUnit.IsDead || (!TargetUnit.Status.HasFlag(StatusFlags.Targetable) && TargetUnit is IObjAiBase obj && !obj.CharData.IsUseable) || !TargetUnit.IsVisibleByTeam(Team))
             {
                 if (IsAttacking)
                 {
@@ -1177,9 +1251,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                         // Units outside of range are ignored.
                         else if (IsAttacking && AutoAttackSpell.CastInfo.Targets[0].Unit != TargetUnit && !(Vector2.Distance(TargetUnit.Position, Position) > (Stats.Range.Total + TargetUnit.CollisionRadius)))
                         {
-                            var tempTargets = new List<ICastTarget>(AutoAttackSpell.CastInfo.Targets);
-                            tempTargets[0] = new CastTarget(TargetUnit, tempTargets[0].HitResult);
-                            AutoAttackSpell.SetTargetUnits(tempTargets);
+                            AutoAttackSpell.SetCurrentTarget(TargetUnit);
                         }
                     }
                     else
@@ -1245,27 +1317,62 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         /// <param name="order">MoveOrder to set.</param>
         public void UpdateMoveOrder(OrderType order, bool publish = true)
         {
+            if (publish)
+            {
+                // Return if scripts do not allow this order.
+                if (!ApiEventManager.OnUnitUpdateMoveOrder.Publish(this, order))
+                {
+                    return;
+                }
+            }
+
             MoveOrder = order;
 
             if ((MoveOrder == OrderType.OrderNone
-                || MoveOrder == OrderType.Taunt
-                || MoveOrder == OrderType.Stop)
+                || MoveOrder == OrderType.Stop
+                || MoveOrder == OrderType.PetHardStop)
                 && !IsPathEnded())
             {
                 StopMovement();
+                SetTargetUnit(null, true);
             }
 
-            if (publish)
+            if (MoveOrder == OrderType.Hold
+                || MoveOrder == OrderType.Taunt)
             {
-                ApiEventManager.OnUnitUpdateMoveOrder.Publish(this, order);
+                StopMovement();
             }
         }
 
+        /// <summary>
+        /// Gets the state of this unit's AI.
+        /// </summary>
+        public AIState GetAIState()
+        {
+            return _aiState;
+        }
+
+        /// <summary>
+        /// Sets the state of this unit's AI.
+        /// </summary>
+        /// <param name="newState">State to set.</param>
+        public void SetAIState(AIState newState)
+        {
+            _aiState = newState;
+        }
+
+        /// <summary>
+        /// Whether or not this unit's AI is innactive.
+        /// </summary>
         public bool IsAiPaused()
         {
             return _aiPaused;
         }
 
+        /// <summary>
+        /// Forces this unit's AI to pause/unpause.
+        /// </summary>
+        /// <param name="isPaused">Whether or not to pause.</param>
         public void PauseAi(bool isPaused)
         {
             _aiPaused = isPaused;

@@ -81,11 +81,6 @@ namespace LeagueSandbox.GameServer.GameObjects
             if (visionTarget != null)
             {
                 VisionBindNetID = visionTarget.NetId;
-
-                if (Team != visionTarget.Team)
-                {
-                    Team = visionTarget.Team;
-                }
             }
 
             Lifetime = lifetime;
@@ -119,20 +114,22 @@ namespace LeagueSandbox.GameServer.GameObjects
 
         public override void OnAdded()
         {
-            RegisterVision();
             if (HasCollision)
             {
                 _game.Map.CollisionHandler.AddObject(this);
             }
+            _game.ObjectManager.AddVisionProvider(this, Team);
+            RegisterVision();
         }
 
         public override void OnRemoved()
         {
-            UnregisterVision();
-            if(HasCollision)
+            if (HasCollision)
             {
                 _game.Map.CollisionHandler.RemoveObject(this);
             }
+            _game.ObjectManager.RemoveVisionProvider(this, Team);
+            UnregisterVision();
         }
 
         public override void SetTeam(TeamId team)
@@ -142,6 +139,9 @@ namespace LeagueSandbox.GameServer.GameObjects
             RegisterVision();
         }
 
+        /// <summary>
+        /// Additionally registers vision for both teams, if necessary.
+        /// </summary>
         void RegisterVision()
         {
             // NEUTRAL Regions give global vision.
@@ -149,10 +149,6 @@ namespace LeagueSandbox.GameServer.GameObjects
             {
                 _game.ObjectManager.AddVisionProvider(this, TeamId.TEAM_BLUE);
                 _game.ObjectManager.AddVisionProvider(this, TeamId.TEAM_PURPLE);
-            }
-            else
-            {
-                _game.ObjectManager.AddVisionProvider(this, Team);
             }
         }
 
@@ -162,10 +158,6 @@ namespace LeagueSandbox.GameServer.GameObjects
             {
                 _game.ObjectManager.RemoveVisionProvider(this, TeamId.TEAM_BLUE);
                 _game.ObjectManager.RemoveVisionProvider(this, TeamId.TEAM_PURPLE);
-            }
-            else
-            {
-                _game.ObjectManager.RemoveVisionProvider(this, Team);
             }
         }
 

@@ -1,13 +1,10 @@
-﻿using GameServerCore;
+﻿using GameServerCore.Packets.PacketDefinitions.Requests;
+using GameServerCore;
 using GameServerCore.Domain.GameObjects;
 using GameServerCore.Enums;
-using GameServerCore.Packets.Enums;
 using GameServerCore.Packets.Handlers;
-using GameServerCore.Packets.PacketDefinitions.Requests;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
+using System.Collections.Generic;
 
 namespace LeagueSandbox.GameServer.Packets.PacketHandlers
 {
@@ -34,9 +31,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
             if (champion.MovementParameters == null)
             {
                 // Last waypoint position
-                var pos = req.Position;
-                var translatedWaypoints = req.Waypoints.ConvertAll(TranslateFromCenteredCoordinates);
-
+                List<Vector2> translatedWaypoints = req.Waypoints.ConvertAll(TranslateFromCenteredCoordinates);
                 var lastindex = 0;
                 if (!(translatedWaypoints.Count - 1 < 0))
                 {
@@ -65,28 +60,73 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
                     }
                 }
 
-                switch (req.Type)
+                var u = _game.ObjectManager.GetObjectById(req.TargetNetID) as IAttackableUnit;
+                var pet = champion.GetPet();
+
+                switch (req.OrderType)
                 {
-                    case OrderType.AttackTo:
-                        translatedWaypoints[0] = champion.Position;
-                        champion.UpdateMoveOrder(OrderType.AttackTo, true);
-                        champion.SetWaypoints(translatedWaypoints);
-                        break;
-                    case OrderType.Stop:
-                        champion.UpdateMoveOrder(OrderType.Stop, true);
-                        break;
-                    case OrderType.Taunt:
-                        champion.UpdateMoveOrder(OrderType.Taunt);
-                        return true;
-                    case OrderType.AttackMove:
-                        translatedWaypoints[0] = champion.Position;
-                        champion.UpdateMoveOrder(OrderType.AttackMove, true);
-                        champion.SetWaypoints(translatedWaypoints);
-                        break;
                     case OrderType.MoveTo:
                         translatedWaypoints[0] = champion.Position;
                         champion.UpdateMoveOrder(OrderType.MoveTo, true);
                         champion.SetWaypoints(translatedWaypoints);
+                        champion.SetTargetUnit(u);
+                        break;
+                    case OrderType.AttackTo:
+                        translatedWaypoints[0] = champion.Position;
+                        champion.UpdateMoveOrder(OrderType.AttackTo, true);
+                        champion.SetWaypoints(translatedWaypoints);
+                        champion.SetTargetUnit(u);
+                        break;
+                    case OrderType.PetHardAttack:
+                        if (pet != null)
+                        {
+                            List<Vector2> waypoints = _game.Map.PathingHandler.GetPath(pet.Position, nav.GetClosestTerrainExit(req.Position));
+                            pet.UpdateMoveOrder(OrderType.PetHardAttack, true);
+                            pet.SetWaypoints(waypoints);
+                            pet.SetTargetUnit(u, true);
+                        }
+                        break;
+                    case OrderType.PetHardMove:
+                        if (pet != null)
+                        {
+                            List<Vector2> waypoints = _game.Map.PathingHandler.GetPath(pet.Position, nav.GetClosestTerrainExit(req.Position));
+                            pet.UpdateMoveOrder(OrderType.PetHardMove, true);
+                            pet.SetWaypoints(waypoints);
+                            pet.SetTargetUnit(u, true);
+                        }
+                        break;
+                    case OrderType.AttackMove:
+                        translatedWaypoints[0] = champion.Position;
+                        champion.UpdateMoveOrder(OrderType.AttackMove, true);
+                        champion.SetWaypoints(translatedWaypoints);
+                        champion.SetTargetUnit(u);
+                        break;
+                    case OrderType.Taunt:
+                        champion.UpdateMoveOrder(OrderType.Taunt);
+                        return true;
+                    case OrderType.PetHardReturn:
+                        if (pet != null)
+                        {
+                            List<Vector2> waypoints = _game.Map.PathingHandler.GetPath(pet.Position, nav.GetClosestTerrainExit(req.Position));
+                            pet.UpdateMoveOrder(OrderType.PetHardReturn, true);
+                            pet.SetWaypoints(waypoints);
+                            pet.SetTargetUnit(u, true);
+                        }
+                        break;
+                    case OrderType.Stop:
+                        champion.UpdateMoveOrder(OrderType.Stop, true);
+                        break;
+                    case OrderType.PetHardStop:
+                        if (pet != null)
+                        {
+                            pet.UpdateMoveOrder(OrderType.PetHardStop, true);
+                        }
+                        break;
+                    case OrderType.Use:
+                        translatedWaypoints[0] = champion.Position;
+                        champion.UpdateMoveOrder(OrderType.Use, true);
+                        champion.SetWaypoints(translatedWaypoints);
+                        champion.SetTargetUnit(u);
                         break;
                 }
 
@@ -96,9 +136,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
                 }
             }
 
-            var u = _game.ObjectManager.GetObjectById(req.TargetNetId) as IAttackableUnit;
-            champion.SetTargetUnit(u);
-
+            // TODO: Shouldn't be here.
             if (champion.SpellToCast != null)
             {
                 champion.SetSpellToCast(null, Vector2.Zero);

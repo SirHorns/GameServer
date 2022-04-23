@@ -470,13 +470,14 @@ namespace LeagueSandbox.GameServer.API
             int skinId = 0,
             bool ignoreCollision = false,
             bool targetable = true,
+             bool isWard = false,
             SpellDataFlags targetingFlags = 0,
             IObjAiBase visibilityOwner = null,
             bool isVisible = true,
             bool aiPaused = true
         )
         {
-            var m = new Minion(_game, owner, position, model, name, 0, team, skinId, ignoreCollision, targetable, visibilityOwner);
+            var m = new Minion(_game, owner, position, model, name, 0, team, skinId, ignoreCollision, targetable, isWard, visibilityOwner);
             m.Stats.IsTargetableToTeam = targetingFlags;
             _game.ObjectManager.AddObject(m);
             if (owner != null)
@@ -541,7 +542,8 @@ namespace LeagueSandbox.GameServer.API
             bool revealStealthed = false,
             IAttackableUnit revealSpecificUnitOnly = null,
             float collisionArea = 0f,
-            IGameObject collisionOwner = null
+            IGameObject collisionOwner = null,
+            RegionType regionType = RegionType.Default
         )
         {
             var useCollision = false;
@@ -551,7 +553,7 @@ namespace LeagueSandbox.GameServer.API
             }
 
             // TODO: Implement revealSpecificUnitOnly
-            return new Region(_game, team, target.Position, collisionUnit: collisionOwner, visionTarget: target, giveVision: true, visionRadius: radius, revealStealth: revealStealthed, hasCollision: useCollision, collisionRadius: collisionArea, lifetime: duration);
+            return new Region(_game, team, target.Position, regionType, collisionOwner, revealSpecificUnitOnly, true, radius, revealStealthed, useCollision, collisionArea, duration);
         }
 
         /// <summary>
@@ -626,7 +628,7 @@ namespace LeagueSandbox.GameServer.API
                     returnList.Add(u);
                 }
             }
-
+            returnList.OrderBy(unit => Vector2.DistanceSquared(unit.Position, targetPos));
             return returnList;
         }
 
@@ -903,6 +905,34 @@ namespace LeagueSandbox.GameServer.API
             unit.SetStatus(status, enabled);
         }
 
+        /// <summary>
+        /// Sets the given spell slot of the given unit to the spell of the given name.
+        /// </summary>
+        /// <param name="target">Unit to set the spell for.</param>
+        /// <param name="newName">Name of the spell to place in the slot.</param>
+        /// <param name="slotType">Type of slot being used.</param>
+        /// <param name="slot">Index of the spell slot to change.</param>
+        /// <param name="fullReplace">Whether or not the spell should be entirely replaced, or just the name. Typically used for transformations.</param>
+        /// <returns>Newly created spell or existing spell with the given name. Null for failure.</returns>
+        public static ISpell SetSpell(IObjAiBase target, string newName, SpellSlotType slotType, int slot, bool fullReplace = false)
+        {
+            slot = ConvertAPISlot(slotType, slot);
+
+            if (slot == -1)
+            {
+                return null;
+            }
+
+            return target.SetSpell(newName, (byte)slot, true, fullReplace);
+        }
+
+        /// <summary>
+        /// Sets the targeting type of the spell in a given slot to a given targeting type.
+        /// </summary>
+        /// <param name="target">Unit to set the targeting type for.</param>
+        /// <param name="slotType">Type of slot being used.</param>
+        /// <param name="slot">Index of the spell slot to change.</param>
+        /// <param name="newType">Targeting type to set.</param>
         public static void SetTargetingType(IObjAiBase target, SpellSlotType slotType, int slot, TargetingType newType)
         {
             slot = ConvertAPISlot(slotType, slot);
@@ -949,7 +979,7 @@ namespace LeagueSandbox.GameServer.API
         public static void SpellCast(IObjAiBase caster, int slot, SpellSlotType slotType, Vector2 pos, Vector2 endPos, bool fireWithoutCasting, Vector2 overrideCastPos, List<ICastTarget> targets = null, bool isForceCastingOrChanneling = false, int overrideForceLevel = -1, bool updateAutoAttackTimer = false, bool useAutoAttackSpell = false)
         {
             slot = ConvertAPISlot(slotType, slot);
-            
+
             ISpell spell = caster.GetSpell((byte)slot);
 
             if (targets == null)
@@ -1052,6 +1082,7 @@ namespace LeagueSandbox.GameServer.API
                 DeathDuration = duration
             };
         }
+
         /// <summary>
         /// Returns whether or not the designed team has vision over an unit or not
         /// </summary>
@@ -1062,6 +1093,7 @@ namespace LeagueSandbox.GameServer.API
         {
             return _game.ObjectManager.TeamHasVisionOn(team, unit);
         }
+
         /// <summary>
         /// Returns wether or not an unit is protected from attacks (Monstly used to check tower protection)
         /// </summary>
@@ -1071,6 +1103,7 @@ namespace LeagueSandbox.GameServer.API
         {
             return _game.ProtectionManager.IsProtectionActive(unit);
         }
+
         /// <summary>
         /// Gets a list of waypoints, which forms a path to the desired destination
         /// </summary>
@@ -1087,6 +1120,57 @@ namespace LeagueSandbox.GameServer.API
         {
             //Investigate if we wanna update the stats here too
             _game.PacketNotifier.NotifyS2C_UpdateAttackSpeedCapOverrides(doOverrideMax, maxAttackSpeedOverride, doOverrideMin, minAttackSpeedOverride, unit);
+        }
+
+        public static IItemData GetItemData(int Id)
+        {
+            return _game.ItemManager.SafeGetItemType(Id);
+        }
+
+        public static void PlaySound(string soundName, IAttackableUnit soundOwner)
+        {
+            _game.PacketNotifier.NotifyS2C_PlaySound(soundName, soundOwner);
+        }
+
+        public static void StopTargetingUnit(IAttackableUnit unit)
+        {
+            _game.ObjectManager.StopTargeting(unit);
+        }
+
+        public static IPet CreatePet
+        (
+            IChampion owner,
+            ISpell spell,
+            Vector2 position,
+            string name, 
+            string model, 
+            string buffName,
+            float lifeTime,
+            int skinId = 0,
+            bool cloneInventory = true, 
+            bool showMinimapIfClone = true,
+            bool disallowPlayerControl =false, 
+            bool doFade = false,
+            bool isClone = true,
+            string aiScript = "Pet"
+        )
+        {
+            return new Pet(_game, owner, spell, position, name, model, buffName, lifeTime, skinId, cloneInventory, showMinimapIfClone, disallowPlayerControl, doFade, isClone, aiScript);
+        }
+
+        public static float GetPetReturnRadius()
+        {
+            return _game.Map.MapScript.MapScriptMetadata.AIVars.DefaultPetReturnRadius;
+        }
+
+        public static float GetPetReturnRadius(IMinion minion)
+        {
+            if (minion is IPet pet)
+            {
+                return pet.GetReturnRadius();
+            }
+
+            return GetPetReturnRadius();
         }
     }
 }

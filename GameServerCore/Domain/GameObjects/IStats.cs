@@ -17,7 +17,6 @@ namespace GameServerCore.Domain.GameObjects
         float AttackSpeedFlat { get; set; }
         float HealthPerLevel { get; }
         float ManaPerLevel { get; }
-        float AdPerLevel { get; }
         float ArmorPerLevel { get; }
         float MagicResistPerLevel { get; }
         float HealthRegenerationPerLevel { get; }
@@ -28,12 +27,13 @@ namespace GameServerCore.Domain.GameObjects
         IStat Armor { get; }
         IStat ArmorPenetration { get; }
         IStat AttackDamage { get; }
+        IStat AttackDamagePerLevel { get; }
         IStat AttackSpeedMultiplier { get; }
         IStat CooldownReduction { get; }
         IStat CriticalChance { get; }
         IStat CriticalDamage { get; }
         IStat ExpGivenOnDeath { get; }
-        IStat GoldPerSecond { get; }
+        IStat GoldPerGoldTick { get; }
         IStat GoldGivenOnDeath { get; }
         IStat HealthPoints { get; }
         IStat HealthRegeneration { get; }
@@ -51,6 +51,7 @@ namespace GameServerCore.Domain.GameObjects
         float Gold { get; set; }
         byte Level { get; set; }
         float Experience { get; set; }
+        float Points { get; set; }
         float CurrentHealth { get; set; }
         float CurrentMana { get; set; }
         bool IsGeneratingGold { get; set; }

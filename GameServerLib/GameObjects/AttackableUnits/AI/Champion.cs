@@ -7,10 +7,11 @@ using GameServerCore.Domain.GameObjects.Spell;
 using GameServerCore.NetInfo;
 using GameServerCore.Enums;
 using LeagueSandbox.GameServer.GameObjects.Stats;
-using LeagueSandbox.GameServer.Items;
+using LeagueSandbox.GameServer.Inventory;
 using LeagueSandbox.GameServer.API;
 using LeaguePackets.Game.Events;
 using System;
+using GameServerLib.GameObjects.AttackableUnits;
 
 namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 {
@@ -34,6 +35,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         public int KillSpree { get; set; } = 0;
         public float GoldFromMinions { get; set; }
         public IRuneCollection RuneList { get; }
+        public ITalentInventory TalentInventory { get; set; }
         public IChampionStats ChampStats { get; private set; } = new ChampionStats();
 
         public byte SkillPoints { get; set; }
@@ -43,6 +45,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                         uint playerId,
                         uint playerTeamSpecialId,
                         IRuneCollection runeList,
+                        ITalentInventory talentInventory,
                         ClientInfo clientInfo,
                         uint netId = 0,
                         TeamId team = TeamId.TEAM_BLUE)
@@ -52,11 +55,12 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             _playerTeamSpecialId = playerTeamSpecialId;
             RuneList = runeList;
 
-            Inventory = InventoryManager.CreateInventory(game.PacketNotifier, game.ScriptEngine);
-            Shop = Items.Shop.CreateShop(this, game);
+            Inventory = InventoryManager.CreateInventory(game.PacketNotifier);
+            TalentInventory = talentInventory;
+            Shop = GameServer.Inventory.Shop.CreateShop(this, game);
 
-            Stats.Gold = _game.Map.MapScript.MapScriptMetadata.StartingGold;
-            Stats.GoldPerSecond.BaseValue = _game.Map.MapScript.MapScriptMetadata.GoldPerSecond;
+            Stats.Gold = _game.Map.MapScript.MapScriptMetadata.AIVars.StartingGold;
+            Stats.GoldPerGoldTick.BaseValue = _game.Map.MapScript.MapScriptMetadata.BaseGoldPerGoldTick;
             Stats.IsGeneratingGold = false;
 
             //TODO: automaticaly rise spell levels with CharData.SpellLevelsUp
@@ -96,8 +100,9 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 
         public override void OnAdded()
         {
-            base.OnAdded();
             _game.ObjectManager.AddChampion(this);
+            base.OnAdded();
+            TalentInventory.Initialize(this);
         }
 
         public override void OnRemoved()
@@ -189,11 +194,22 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             _tipsChanged.Clear();
         }
 
+        float goldTimer;
         public override void Update(float diff)
         {
             base.Update(diff);
 
-            if (!Stats.IsGeneratingGold && _game.GameTime >= _game.Map.MapScript.MapScriptMetadata.FirstGoldTime)
+            if (Stats.IsGeneratingGold && Stats.GoldPerGoldTick.Total > 0)
+            {
+                goldTimer -= diff;
+
+                if (goldTimer <= 0)
+                {
+                    Stats.Gold += Stats.GoldPerGoldTick.Total;
+                    goldTimer = _game.Map.MapScript.MapScriptMetadata.GoldTickSpeed;
+                }
+            }
+            else if (!Stats.IsGeneratingGold && _game.GameTime >= _game.Map.MapScript.MapScriptMetadata.AIVars.AmbientGoldDelay * 1000f)
             {
                 Stats.IsGeneratingGold = true;
                 Logger.Debug("Generating Gold!");
@@ -274,7 +290,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             }
         }
 
-        public bool LevelUp(bool force = false)
+        public override bool LevelUp(bool force = false)
         {
             var stats = Stats;
             var expMap = _game.Map.MapData.ExpCurve;
@@ -286,15 +302,12 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 
             if (stats.Level < _game.Map.MapScript.MapScriptMetadata.MaxLevel && (stats.Level < 1 || (stats.Experience >= expMap[stats.Level - 1]))) //The - 1s is there because the XP files don't have level 1
             {
-                Stats.LevelUp();
                 Logger.Debug("Champion " + Model + " leveled up to " + stats.Level);
                 if (stats.Level <= 18)
                 {
                     SkillPoints++;
                 }
-                ApiEventManager.OnLevelUp.Publish(this);
-                _game.PacketNotifier.NotifyNPC_LevelUp(this);
-                _game.PacketNotifier.NotifyUpdatedStats(this, partial: false);
+                base.LevelUp(force);
 
                 return true;
             }
@@ -441,6 +454,21 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
         public void UpdateSkin(int skinNo)
         {
             SkinID = skinNo;
+        }
+
+        public void IncrementScore(float points, ScoreCategory scoreCategory, ScoreEvent scoreEvent, bool doCallOut, bool notifyText = true)
+        {
+            Stats.Points += points;
+            var scoreData = new ScoreData(this, points, scoreCategory, scoreEvent, doCallOut);
+            _game.PacketNotifier.NotifyS2C_IncrementPlayerScore(scoreData);
+
+            if (notifyText)
+            {
+                //TODO: Figure out what "Params" is exactly
+                _game.PacketNotifier.NotifyDisplayFloatingText(new FloatingTextData(this, $"+{(int)points} Points", FloatTextType.Score, 1073741833), Team);
+            }
+
+            ApiEventManager.OnIncrementChampionScore.Publish(scoreData);
         }
     }
 }

@@ -34,14 +34,12 @@ namespace LeagueSandbox.GameServer.GameObjects
             (
                 game, null, position, model, name,
                 netId, team, 0, ignoresCollision, isTargetable,
-                null, aiScript, damageBonus, healthBonus, initialLevel
+                false ,null, aiScript, damageBonus, healthBonus, initialLevel
             )
         {
             Camp = monsterCamp;
             Team = team;
             SpawnAnimation = spawnAnimation;
-            IsTargetable = true;
-            IgnoresCollision = false;
             FaceDirection(faceDirection);
             IsTargetable = isTargetable;
             IgnoresCollision = ignoresCollision;

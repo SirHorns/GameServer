@@ -137,6 +137,7 @@ namespace GameServerCore.Domain.GameObjects
         /// </summary>
         void ResetAutoAttackSpell();
         ISpell LevelUpSpell(byte slot);
+        bool LevelUp(bool force = true);
         /// <summary>
         /// Sets this unit's auto attack spell that they will use when in range of their target (unless they are going to cast a spell first).
         /// </summary>
@@ -183,6 +184,12 @@ namespace GameServerCore.Domain.GameObjects
         /// <returns>Spell that is being cast.</returns>
         ISpell GetCastSpell();
         /// <summary>
+        /// Forces this unit to stop targeting the given unit.
+        /// Applies to attacks, spell casts, spell channels, and any queued spell casts.
+        /// </summary>
+        /// <param name="target"></param>
+        void Untarget(IAttackableUnit target);
+        /// <summary>
         /// Sets this AI's current target unit. This relates to both auto attacks as well as general spell targeting.
         /// </summary>
         /// <param name="target">Unit to target.</param>
@@ -207,6 +214,14 @@ namespace GameServerCore.Domain.GameObjects
         /// <param name="reason">How it should be treated.</param>
         void StopChanneling(ChannelingStopCondition condition, ChannelingStopSource reason);
         /// <summary>
+        /// Gets the most recently spawned Pet unit which is owned by this unit.
+        /// </summary>
+        IPet GetPet();
+        /// <summary>
+        /// Sets the most recently spawned Pet unit which is owned by this unit.
+        /// </summary>
+        void SetPet(IPet pet);
+        /// <summary>
         /// Sets this unit's move order to the given order type.
         /// </summary>
         /// <param name="order">OrderType to set.</param>
@@ -214,7 +229,23 @@ namespace GameServerCore.Domain.GameObjects
         void UpdateMoveOrder(OrderType order, bool publish = true);
         ClassifyUnit ClassifyTarget(IAttackableUnit target, IAttackableUnit victium = null);
         bool RecalculateAttackPosition();
+        /// <summary>
+        /// Gets the state of this unit's AI.
+        /// </summary>
+        AIState GetAIState();
+        /// <summary>
+        /// Sets the state of this unit's AI.
+        /// </summary>
+        /// <param name="newState">State to set.</param>
+        void SetAIState(AIState newState);
+        /// <summary>
+        /// Whether or not this unit's AI is innactive.
+        /// </summary>
         bool IsAiPaused();
+        /// <summary>
+        /// Forces this unit's AI to pause/unpause.
+        /// </summary>
+        /// <param name="isPaused">Whether or not to pause.</param>s
         void PauseAi(bool isPaused);
     }
 }
