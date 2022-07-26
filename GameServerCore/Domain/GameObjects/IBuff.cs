@@ -16,6 +16,10 @@ namespace GameServerCore.Domain.GameObjects
         /// </summary>
         BuffType BuffType { get; }
         /// <summary>
+        /// Buff removal source. Determines how this buff should be removed from the unit. Refer to BuffRemovalSource.
+        /// </summary>
+        BuffRemovalSource BuffRemovalSource { get; }
+        /// <summary>
         /// Total time this buff should be applied to its target.
         /// </summary>
         float Duration { get; }

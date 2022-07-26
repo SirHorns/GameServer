@@ -430,7 +430,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 Attacker = attacker,
                 Target = this,
                 Damage = damage,
-                PostMitigationdDamage = postMitigationDamage,
+                PostMitigationDamage = postMitigationDamage,
                 DamageSource = source,
                 DamageType = type,
             };
@@ -563,7 +563,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             var attackerStats = damageData.Attacker.Stats;
             var type = damageData.DamageType;
             var source = damageData.DamageSource;
-            var postMitigationDamage = damageData.PostMitigationdDamage;
+            var postMitigationDamage = damageData.PostMitigationDamage;
 
             ApiEventManager.OnPreTakeDamage.Publish(damageData);
 

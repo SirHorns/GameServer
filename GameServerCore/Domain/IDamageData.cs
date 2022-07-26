@@ -33,6 +33,6 @@ namespace GameServerCore.Domain
         /// <summary>
         /// Damage after being reduced by MR/Armor
         /// </summary>
-        float PostMitigationdDamage { get; }
+        float PostMitigationDamage { get; }
     }
 }

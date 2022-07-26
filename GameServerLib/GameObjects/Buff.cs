@@ -21,9 +21,10 @@ namespace LeagueSandbox.GameServer.GameObjects
         // Function Vars.
         private readonly bool _infiniteDuration;
         private bool _remove;
-
+        
         public BuffAddType BuffAddType { get; }
         public BuffType BuffType { get; } /// TODO: Add comments to BuffType enum.
+        public BuffRemovalSource BuffRemovalSource { get; }
         public float Duration { get; }
         public bool IsHidden { get; }
         public string Name { get; }
