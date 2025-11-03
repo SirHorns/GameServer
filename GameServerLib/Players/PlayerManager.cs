@@ -11,7 +11,7 @@ namespace LeagueSandbox.GameServer.Players
         private NetworkIdManager _networkIdManager;
         private Game _game;
 
-        private List<ClientInfo> _players = new List<ClientInfo>();
+        private List<GameClient> _players = new List<GameClient>();
         private Dictionary<TeamId, int> _userIdsPerTeam = new Dictionary<TeamId, int>
         {
             { TeamId.TEAM_BLUE, 0 },
@@ -32,7 +32,7 @@ namespace LeagueSandbox.GameServer.Players
                 config.Summoner2
             };
             var teamId = config.Team;
-            var info = new ClientInfo(
+            var info = new GameClient(
                 config.Rank,
                 teamId,
                 config.Ribbon,
@@ -66,14 +66,14 @@ namespace LeagueSandbox.GameServer.Players
             _game.ObjectManager.AddObject(c);
         }
 
-        public void AddPlayer(ClientInfo info)
+        public void AddPlayer(GameClient info)
         {
             info.ClientId = _players.Count;
             _players.Add(info);
         }
 
         // GetPlayerFromPeer
-        public ClientInfo GetPeerInfo(int clientId)
+        public GameClient GetPeerInfo(int clientId)
         {
             if (0 <= clientId && clientId < _players.Count)
             {
@@ -82,17 +82,17 @@ namespace LeagueSandbox.GameServer.Players
             return null;
         }
 
-        public ClientInfo GetClientInfoByPlayerId(long playerId)
+        public GameClient GetClientInfoByPlayerId(long playerId)
         {
             return _players.Find(c => c.PlayerId == playerId);
         }
 
-        public ClientInfo GetClientInfoByChampion(Champion champ)
+        public GameClient GetClientInfoByChampion(Champion champ)
         {
             return _players.Find(c => c.Champion == champ);
         }
 
-        public List<ClientInfo> GetPlayers(bool includeBots = true)
+        public List<GameClient> GetPlayers(bool includeBots = true)
         {
             if (!includeBots)
             {

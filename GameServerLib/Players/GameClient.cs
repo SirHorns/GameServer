@@ -3,7 +3,7 @@ using LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI;
 
 namespace GameServerCore.NetInfo
 {
-    public class ClientInfo
+    public class GameClient
     {
         public long PlayerId { get; private set; }
         public int ClientId { get; set; }
@@ -35,7 +35,7 @@ namespace GameServerCore.NetInfo
             }
         }
 
-        public ClientInfo(string rank,
+        public GameClient(string rank,
                           TeamId team,
                           short ribbon,
                           int icon,

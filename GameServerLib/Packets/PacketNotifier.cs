@@ -20,6 +20,7 @@ using LeaguePackets.LoadScreen;
 using LeaguePackets.Game.Events;
 using Channel = GameServerCore.Packets.Enums.Channel;
 using GameServerCore.Packets.Enums;
+using GameServerLib;
 using LeagueSandbox.GameServer.Content.Navigation;
 using LeagueSandbox.GameServer.GameObjects.SpellNS;
 using LeagueSandbox.GameServer.GameObjects;
@@ -42,8 +43,7 @@ namespace PacketDefinitions420
     {
         private readonly PacketHandlerManager _packetHandlerManager;
         private readonly NavigationGrid _navGrid;
-        private Dictionary<int, List<MovementDataNormal>> _heldMovementData = new Dictionary<int, List<MovementDataNormal>>();
-        private Dictionary<int, List<ReplicationData>> _heldReplicationData = new Dictionary<int, List<ReplicationData>>();
+        
 
         /// <summary>
         /// Instantiation which preps PacketNotifier for packet sending.
@@ -615,7 +615,7 @@ namespace PacketDefinitions420
         /// <param name="time">Amount of time the region lasts.</param>
         /// <param name="radius">Radius of the region.</param>
         /// <param name="regionType">Type of region, possible values unknown.</param>
-        /// <param name="clientInfo">Info about a client that might own (or be the target of) the region.</param>
+        /// <param name="gameClient">Info about a client that might own (or be the target of) the region.</param>
         /// <param name="obj">GameObject that might own (or be the target of) the region.</param>
         /// <param name="collisionRadius">Collision radius for the region (only if it should have collision).</param>
         /// <param name="grassRadius">Radius of the region's grass.</param>
@@ -624,7 +624,7 @@ namespace PacketDefinitions420
         /// <param name="grantVis">Whether or not the region should give the region's team vision of enemy units.</param>
         /// <param name="stealthVis">Whether or not invisible units should be visible in the region.</param>
         /// TODO: Implement a Region class so we can easily grab these parameters instead of listing them all in the function.
-        public void NotifyAddRegion(uint unitNetId, uint bubbleNetId, TeamId team, Vector2 position, float time, float radius = 0, int regionType = 0, ClientInfo clientInfo = null, GameObject obj = null, float collisionRadius = 0, float grassRadius = 0, float sizemult = 1.0f, float addsize = 0, bool grantVis = true, bool stealthVis = false)
+        public void NotifyAddRegion(uint unitNetId, uint bubbleNetId, TeamId team, Vector2 position, float time, float radius = 0, int regionType = 0, GameClient gameClient = null, GameObject obj = null, float collisionRadius = 0, float grassRadius = 0, float sizemult = 1.0f, float addsize = 0, bool grantVis = true, bool stealthVis = false)
         {
             var regionPacket = new AddRegion
             {
@@ -647,13 +647,13 @@ namespace PacketDefinitions420
                 BaseRadius = radius // 800.0 for turrets
             };
 
-            if (clientInfo != null)
+            if (gameClient != null)
             {
-                if (clientInfo.Champion != null)
+                if (gameClient.Champion != null)
                 {
-                    regionPacket.VisionTargetNetID = clientInfo.Champion.NetId;
+                    regionPacket.VisionTargetNetID = gameClient.Champion.NetId;
                 }
-                regionPacket.ClientID = clientInfo.ClientId;
+                regionPacket.ClientID = gameClient.ClientId;
             }
 
             if (obj != null)
@@ -735,29 +735,29 @@ namespace PacketDefinitions420
         /// <summary>
         /// Sends a packet to the specified user or all users informing them of the given client's summoner data such as runes, summoner spells, masteries (or talents as named internally), etc.
         /// </summary>
-        /// <param name="client">Info about the player's summoner data.</param>
+        /// <param name="gameClient">Info about the player's summoner data.</param>
         /// <param name="userId">User to send the packet to. Set to -1 to broadcast.</param>
-        public void NotifyAvatarInfo(ClientInfo client, int userId = -1)
+        public void NotifyAvatarInfo(GameClient gameClient, int userId = -1)
         {
             var avatar = new AvatarInfo_Server();
-            avatar.SenderNetID = client.Champion.NetId;
+            avatar.SenderNetID = gameClient.Champion.NetId;
             var skills = new uint[] {
-                HashFunctions.HashString(client.SummonerSkills[0]),
-                HashFunctions.HashString(client.SummonerSkills[1])
+                HashFunctions.HashString(gameClient.SummonerSkills[0]),
+                HashFunctions.HashString(gameClient.SummonerSkills[1])
             };
 
             avatar.SummonerIDs[0] = skills[0];
             avatar.SummonerIDs[1] = skills[1];
-            for (int i = 0; i < client.Champion.RuneList.Runes.Count; ++i)
+            for (int i = 0; i < gameClient.Champion.RuneList.Runes.Count; ++i)
             {
                 int runeValue = 0;
-                client.Champion.RuneList.Runes.TryGetValue(i, out runeValue);
+                gameClient.Champion.RuneList.Runes.TryGetValue(i, out runeValue);
                 avatar.ItemIDs[i] = (uint)runeValue;
             }
 
-            for (int i = 0; i < client.Champion.TalentInventory.Talents.Count; i++)
+            for (int i = 0; i < gameClient.Champion.TalentInventory.Talents.Count; i++)
             {
-                var talent = client.Champion.TalentInventory.Talents.ElementAt(i).Value;
+                var talent = gameClient.Champion.TalentInventory.Talents.ElementAt(i).Value;
                 avatar.Talents[i] = new LeaguePackets.Game.Common.Talent
                 {
                     Hash = HashString(talent.Name),
@@ -1557,7 +1557,7 @@ namespace PacketDefinitions420
         /// </summary>
         /// <param name="userId">User to send the packet to.</param>
         /// <param name="players">Client info of all players in the loading screen.</param>
-        public void NotifyLoadScreenInfo(int userId, List<ClientInfo> players)
+        public void Notify_TeamRosterUpdate(int userId, List<GameClient> players)
         {
             uint orderSizeCurrent = 0;
             uint chaosSizeCurrent = 0;
@@ -2326,7 +2326,7 @@ namespace PacketDefinitions420
         /// </summary>
         /// <param name="seconds">Amount of time till the pause ends.</param>
         /// <param name="showWindow">Whether or not to show a pause window.</param>
-        public void NotifyPausePacket(ClientInfo player, int seconds, bool isTournament)
+        public void NotifyPausePacket(GameClient player, int seconds, bool isTournament)
         {
             var pg = new PausePacket
             {
@@ -2344,7 +2344,7 @@ namespace PacketDefinitions420
         /// </summary>
         /// <param name="request">Info of the target client given via the client who requested loading screen progress.</param>
         /// <param name="clientInfo">Client info of the client who's progress is being requested.</param>
-        public void NotifyPingLoadInfo(ClientInfo client, PingLoadInfoRequest request)
+        public void NotifyPingLoadInfo(GameClient gameClient, PingLoadInfoRequest request)
         {
             var response = new S2C_Ping_Load_Info
             {
@@ -2352,7 +2352,7 @@ namespace PacketDefinitions420
                 {
                     ClientID = request.ClientID,
                     Ping = request.Ping,
-                    PlayerID = client.PlayerId,
+                    PlayerID = gameClient.PlayerId,
                     ETA = request.ETA,
                     Ready = request.Ready,
                     Percentage = request.Percentage,
@@ -2446,7 +2446,7 @@ namespace PacketDefinitions420
         /// </summary>
         /// <param name="userId">User to send the packet to.</param>
         /// <param name="player">Player information to send.</param>
-        public void NotifyRequestRename(int userId, ClientInfo player)
+        public void NotifyRequestRename(int userId, GameClient player)
         {
             var loadName = new RequestRename
             {
@@ -2465,7 +2465,7 @@ namespace PacketDefinitions420
         /// </summary>
         /// <param name="userId">User to send the packet to.</param>
         /// <param name="player">Player information to send.</param>
-        public void NotifyRequestReskin(int userId, ClientInfo player)
+        public void NotifyRequestReskin(int userId, GameClient player)
         {
             var loadChampion = new RequestReskin
             {
@@ -2481,7 +2481,7 @@ namespace PacketDefinitions420
         /// </summary>
         /// <param name="unpauser">Unit that unpaused the game.</param>
         /// <param name="showWindow">Whether or not to show a window before unpausing (delay).</param>
-        public void NotifyResumePacket(Champion unpauser, ClientInfo player, bool isDelayed)
+        public void NotifyResumePacket(Champion unpauser, GameClient player, bool isDelayed)
         {
             var resume = new ResumePacket
             {
@@ -2604,15 +2604,15 @@ namespace PacketDefinitions420
         /// <summary>
         /// Sends a packet to the specified user or all users detailing that the hero designated to the given clientInfo has been created.
         /// </summary>
-        /// <param name="clientInfo">Information about the client which had their hero created.</param>
+        /// <param name="gameClient">Information about the client which had their hero created.</param>
         /// <param name="userId">User to send the packet to. Set to -1 to broadcast.</param>
-        public void NotifyS2C_CreateHero(ClientInfo clientInfo, int userId = -1, bool doVision = false)
+        public void NotifyS2C_CreateHero(GameClient gameClient, int userId = -1, bool doVision = false)
         {
-            var champion = clientInfo.Champion;
+            var champion = gameClient.Champion;
             var heroPacket = new S2C_CreateHero()
             {
                 NetID = champion.NetId,
-                ClientID = clientInfo.ClientId,
+                ClientID = gameClient.ClientId,
                 // NetNodeID,
                 // For bots (0 = Beginner, 1 = Intermediate)
                 SkillLevel = 0,
@@ -2692,7 +2692,7 @@ namespace PacketDefinitions420
         /// Disables the U.I when the game ends
         /// </summary>
         /// <param name="player"></param>
-        public void NotifyS2C_DisableHUDForEndOfGame(ClientInfo player)
+        public void NotifyS2C_DisableHUDForEndOfGame(GameClient player)
         {
             var disableHud = new S2C_DisableHUDForEndOfGame();
             _packetHandlerManager.SendPacket(player.ClientId, disableHud.GetBytes(), Channel.CHL_S2C);
@@ -2796,11 +2796,11 @@ namespace PacketDefinitions420
         /// <summary>
         /// Sends a packet to the specified client's team detailing a map ping.
         /// </summary>
-        /// <param name="client">Info of the client that initiated the ping.</param>
+        /// <param name="gameClient">Info of the client that initiated the ping.</param>
         /// <param name="pos">2D top-down position of the ping.</param>
         /// <param name="targetNetId">Target of the ping (if applicable).</param>
         /// <param name="type">Type of ping; COMMAND/ATTACK/DANGER/MISSING/ONMYWAY/FALLBACK/REQUESTHELP. *NOTE*: Not all ping types are supported yet.</param>
-        public void NotifyS2C_MapPing(Vector2 pos, Pings type, uint targetNetId = 0, ClientInfo client = null)
+        public void NotifyS2C_MapPing(Vector2 pos, Pings type, uint targetNetId = 0, GameClient gameClient = null)
         {
             var response = new S2C_MapPing
             {
@@ -2821,11 +2821,11 @@ namespace PacketDefinitions420
                 response.TargetNetID = targetNetId;
             }
 
-            if (client != null)
+            if (gameClient != null)
             {
-                response.SenderNetID = client.Champion.NetId;
-                response.SourceNetID = client.Champion.NetId;
-                _packetHandlerManager.BroadcastPacketTeam(client.Team, response.GetBytes(), Channel.CHL_S2C);
+                response.SenderNetID = gameClient.Champion.NetId;
+                response.SourceNetID = gameClient.Champion.NetId;
+                _packetHandlerManager.BroadcastPacketTeam(gameClient.Team, response.GetBytes(), Channel.CHL_S2C);
             }
             else
             {
@@ -2842,7 +2842,7 @@ namespace PacketDefinitions420
         /// <param name="travelTime">The time the camera will have to travel the given distance</param>
         /// <param name="startFromCurretPosition">Wheter or not it starts from current position</param>
         /// <param name="unlockCamera">Whether or not the camera is unlocked</param>
-        public void NotifyS2C_MoveCameraToPoint(ClientInfo player, Vector3 startPosition, Vector3 endPosition, float travelTime = 0, bool startFromCurretPosition = true, bool unlockCamera = false)
+        public void NotifyS2C_MoveCameraToPoint(GameClient player, Vector3 startPosition, Vector3 endPosition, float travelTime = 0, bool startFromCurretPosition = true, bool unlockCamera = false)
         {
             var cam = new S2C_MoveCameraToPoint
             {
@@ -3681,7 +3681,7 @@ namespace PacketDefinitions420
         /// <param name="version">Version of the player being checked.</param>
         /// <param name="gameMode">String of the internal name of the gamemode being played.</param>
         /// <param name="mapId">ID of the map being played.</param>
-        public void NotifySynchVersion(int userId, List<ClientInfo> players, string version, string gameMode, int mapId)
+        public void NotifySynchVersion(int userId, List<GameClient> players, string version, string gameMode, int mapId)
         {
             var syncVersion = new SynchVersionS2C
             {
@@ -4104,30 +4104,14 @@ namespace PacketDefinitions420
             }
         }
 
-        /// <summary>
-        /// Creates a package and puts it in the queue that will be emptied with the NotifyWaypointGroup call.
-        /// </summary>
-        /// <param name="u">AttackableUnit that is moving.</param>
-        /// <param name="userId">UserId to send the packet to. If not specified or zero, the packet is broadcasted to all players that have vision of the specified unit.</param>
-        /// <param name="useTeleportID">Whether or not to teleport the unit to its current position in its path.</param>
-        public void HoldMovementDataUntilWaypointGroupNotification(AttackableUnit u, int userId, bool useTeleportID = false)
-        {
-            var data = PacketExtensions.CreateMovementDataNormal(u, _navGrid, useTeleportID);
-
-            List<MovementDataNormal> list = null;
-            if (!_heldMovementData.TryGetValue(userId, out list))
-            {
-                _heldMovementData[userId] = list = new List<MovementDataNormal>();
-            }
-            list.Add(data);
-        }
+        
 
         /// <summary>
         /// Sends all packets queued by HoldMovementDataUntilWaypointGroupNotification and clears queue.
         /// </summary>
         public void NotifyWaypointGroup()
         {
-            foreach (var kv in _heldMovementData)
+            foreach (var kv in Replications.HeldMovementData)
             {
                 int userId = kv.Key;
                 var list = kv.Value;
@@ -4147,30 +4131,14 @@ namespace PacketDefinitions420
             }
         }
 
-        /// <summary>
-        /// Creates a package and puts it in the queue that will be emptied with the NotifyOnReplication call.
-        /// </summary>
-        /// <param name="u">Unit who's stats have been updated.</param>
-        /// <param name="userId">UserId to send the packet to. If not specified or zero, the packet is broadcasted to all players that have vision of the specified unit.</param>
-        /// <param name="partial">Whether or not the packet should only include stats marked as changed.</param>
-        public void HoldReplicationDataUntilOnReplicationNotification(AttackableUnit u, int userId, bool partial = true)
-        {
-            var data = u.Replication.GetData(partial);
-
-            List<ReplicationData> list = null;
-            if (!_heldReplicationData.TryGetValue(userId, out list))
-            {
-                _heldReplicationData[userId] = list = new List<ReplicationData>();
-            }
-            list.Add(data);
-        }
+        
 
         /// <summary>
         /// Sends all packets queued by HoldReplicationDataUntilOnReplicationNotification and clears queue.
         /// </summary>
         public void NotifyOnReplication()
         {
-            foreach (var kv in _heldReplicationData)
+            foreach (var kv in Replications.HeldReplicationData)
             {
                 int userId = kv.Key;
                 var list = kv.Value;
@@ -4334,15 +4302,15 @@ namespace PacketDefinitions420
         /// <param name="userId">User to send the packet to.</param>
         /// <param name="request">ViewRequest housing information about the camera's view.</param>
         /// TODO: Verify if this is the correct implementation.
-        public void NotifyWorld_SendCamera_Server_Acknologment(ClientInfo client, ViewRequest request)
+        public void NotifyWorld_SendCamera_Server_Acknologment(GameClient gameClient, ViewRequest request)
         {
             var answer = new World_SendCamera_Server_Acknologment
             {
                 //TODO: Check these values
-                SenderNetID = client.Champion.NetId,
+                SenderNetID = gameClient.Champion.NetId,
                 SyncID = request.SyncID,
             };
-            _packetHandlerManager.SendPacket(client.ClientId, answer.GetBytes(), Channel.CHL_S2C, PacketFlags.NONE);
+            _packetHandlerManager.SendPacket(gameClient.ClientId, answer.GetBytes(), Channel.CHL_S2C, PacketFlags.NONE);
         }
     }
 }

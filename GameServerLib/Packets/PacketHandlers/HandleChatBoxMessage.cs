@@ -35,7 +35,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
                     if (int.TryParse(split[1], out var y))
                     {
                         var client = _playerManager.GetPeerInfo(userId);
-                        _game.PacketNotifier.NotifyS2C_MapPing(new Vector2(x, y), Pings.PING_DEFAULT, client: client);
+                        _game.PacketNotifier.NotifyS2C_MapPing(new Vector2(x, y), Pings.PING_DEFAULT, gameClient: client);
                     }
                 }
             }

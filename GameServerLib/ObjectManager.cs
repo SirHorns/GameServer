@@ -154,11 +154,11 @@ namespace LeagueSandbox.GameServer
             }
         }
 
-        public void SpawnObjects(ClientInfo clientInfo)
+        public void SpawnObjects(GameClient gameClient)
         {
             foreach (GameObject obj in _objects.Values)
             {
-                UpdateVisionSpawnAndSync(obj, clientInfo, forceSpawn: true);
+                UpdateVisionSpawnAndSync(obj, gameClient, forceSpawn: true);
             }
         }
 
@@ -176,11 +176,11 @@ namespace LeagueSandbox.GameServer
         /// <summary>
         /// Updates the player's vision, which may not be tied to the team's vision, sends a spawn notification or updates if the object is already spawned.
         /// </summary>
-        public void UpdateVisionSpawnAndSync(GameObject obj, ClientInfo clientInfo, bool forceSpawn = false)
+        public void UpdateVisionSpawnAndSync(GameObject obj, GameClient gameClient, bool forceSpawn = false)
         {
-            int cid = clientInfo.ClientId;
-            TeamId team = clientInfo.Team;
-            Champion champion = clientInfo.Champion;
+            int cid = gameClient.ClientId;
+            TeamId team = gameClient.Team;
+            Champion champion = gameClient.Champion;
 
             bool nearSighted = champion.Status.HasFlag(StatusFlags.NearSighted);
             bool shouldBeVisibleForPlayer = !obj.IsAffectedByFoW || (

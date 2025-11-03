@@ -45,14 +45,14 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
                         string model,
                         RuneCollection runeList,
                         TalentInventory talentInventory,
-                        ClientInfo clientInfo,
+                        GameClient gameClient,
                         uint netId = 0,
                         TeamId team = TeamId.TEAM_BLUE,
                         Stats stats = null)
-            : base(game, model, clientInfo.Name, 30, new Vector2(), 1200, clientInfo.SkinNo, netId, team, stats)
+            : base(game, model, gameClient.Name, 30, new Vector2(), 1200, gameClient.SkinNo, netId, team, stats)
         {
             //TODO: Champion.ClientInfo?
-            ClientId = clientInfo.ClientId;
+            ClientId = gameClient.ClientId;
             RuneList = runeList;
 
             TalentInventory = talentInventory;
@@ -64,9 +64,9 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 
             //TODO: automaticaly rise spell levels with CharData.SpellLevelsUp
 
-            Spells[(int)SpellSlotType.SummonerSpellSlots] = new Spell(game, this, clientInfo.SummonerSkills[0], (int)SpellSlotType.SummonerSpellSlots);
+            Spells[(int)SpellSlotType.SummonerSpellSlots] = new Spell(game, this, gameClient.SummonerSkills[0], (int)SpellSlotType.SummonerSpellSlots);
             Spells[(int)SpellSlotType.SummonerSpellSlots].LevelUp();
-            Spells[(int)SpellSlotType.SummonerSpellSlots + 1] = new Spell(game, this, clientInfo.SummonerSkills[1], (int)SpellSlotType.SummonerSpellSlots + 1);
+            Spells[(int)SpellSlotType.SummonerSpellSlots + 1] = new Spell(game, this, gameClient.SummonerSkills[1], (int)SpellSlotType.SummonerSpellSlots + 1);
             Spells[(int)SpellSlotType.SummonerSpellSlots + 1].LevelUp();
 
             Spells[(int)SpellSlotType.BluePillSlot] = new Spell(game, this,
@@ -78,7 +78,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
 
             _tipsChanged = new List<ToolTipData>();
 
-            if (clientInfo.PlayerId == -1)
+            if (gameClient.PlayerId == -1)
             {
                 IsBot = true;
             }

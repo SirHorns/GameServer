@@ -147,7 +147,7 @@ namespace LeagueSandbox.GameServer.Chatbox.Commands
 
             var runesTemp = new RuneCollection();
             var talents = new TalentInventory();
-            var clientInfoTemp = new ClientInfo("", team, 0, 0, 0, $"{model} Bot", new string[] { "SummonerHeal", "SummonerFlash" }, -1);
+            var clientInfoTemp = new GameClient("", team, 0, 0, 0, $"{model} Bot", new string[] { "SummonerHeal", "SummonerFlash" }, -1);
 
             _playerManager.AddPlayer(clientInfoTemp);
 

@@ -22,7 +22,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
 
             // Builds team info e.g. first UserId set on Blue has ClientId 0
             // increment by 1 for each added player
-            _game.PacketNotifier.NotifyLoadScreenInfo(userId, players);
+            _game.PacketNotifier.Notify_TeamRosterUpdate(userId, players);
 
             // Distributes each players info by UserId
             foreach (var player in players)

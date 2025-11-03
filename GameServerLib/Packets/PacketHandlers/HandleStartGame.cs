@@ -71,7 +71,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
             _game.Start();
         }
 
-        private void StartFor(ClientInfo player)
+        private void StartFor(GameClient player)
         {
             if (_game.IsPaused)
             {

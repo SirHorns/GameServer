@@ -20,6 +20,7 @@ using LeagueSandbox.GameServer.Packets.PacketHandlers;
 using LeagueSandbox.GameServer.Handlers;
 using GameServerCore.Packets.PacketDefinitions;
 using GameServerCore.Packets.PacketDefinitions.Requests;
+using GameServerLib;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI;
 
 namespace LeagueSandbox.GameServer
@@ -152,6 +153,7 @@ namespace LeagueSandbox.GameServer
             // TODO: GameApp should send the Response/Request handlers
             _packetServer = server;
             // TODO: switch the notifier with ResponseHandler
+            Replications.NavGrid = Map.NavigationGrid;
             PacketNotifier = new PacketNotifier(_packetServer.PacketHandlerManager, Map.NavigationGrid);
 
             ObjectManager = new ObjectManager(this);
@@ -183,6 +185,11 @@ namespace LeagueSandbox.GameServer
         /// </summary>
         public void InitializePacketHandlers()
         {
+            RequestHandler.Register<JoinTeamRequest>(new HandleJoinTeam(this).HandlePacket);
+            
+            RequestHandler.Register<SpawnRequest>(new HandleSpawn(this).HandlePacket);
+            
+            
             // maybe use reflection, the problem is that Register is generic and so it needs to know its type at
             // compile time, maybe just use interface and in runetime figure out the type - and again there is
             // a problem with passing generic delegate to non-generic function, if we try to only constraint the
@@ -201,7 +208,7 @@ namespace LeagueSandbox.GameServer
             RequestHandler.Register<SyncSimTimeRequest>(new HandleSyncSimTime(this).HandlePacket);
             RequestHandler.Register<PingLoadInfoRequest>(new HandleLoadPing(this).HandlePacket);
             RequestHandler.Register<LockCameraRequest>(new HandleLockCamera(this).HandlePacket);
-            RequestHandler.Register<JoinTeamRequest>(new HandleJoinTeam(this).HandlePacket);
+            
             RequestHandler.Register<MovementRequest>(new HandleMove(this).HandlePacket);
             RequestHandler.Register<MoveConfirmRequest>(new HandleMoveConfirm(this).HandlePacket);
             RequestHandler.Register<PauseRequest>(new HandlePauseReq(this).HandlePacket);
@@ -210,7 +217,7 @@ namespace LeagueSandbox.GameServer
             RequestHandler.Register<ScoreboardRequest>(new HandleScoreboard(this).HandlePacket);
             RequestHandler.Register<SellItemRequest>(new HandleSellItem(this).HandlePacket);
             RequestHandler.Register<UpgradeSpellReq>(new HandleUpgradeSpellReq(this).HandlePacket);
-            RequestHandler.Register<SpawnRequest>(new HandleSpawn(this).HandlePacket);
+            
 
             _gameStartHandler = new HandleStartGame(this);
             RequestHandler.Register<StartGameRequest>(_gameStartHandler.HandlePacket);

@@ -11,6 +11,7 @@ using LeagueSandbox.GameServer.API;
 using LeagueSandbox.GameServer.Logging;
 using log4net;
 using GameServerCore.Scripting.CSharp;
+using GameServerLib;
 using LeagueSandbox.GameServer.GameObjects.StatsNS;
 using LeagueSandbox.GameServer.Content;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI;
@@ -328,11 +329,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         {
             if (Replication.Changed)
             {
-                _game.PacketNotifier.HoldReplicationDataUntilOnReplicationNotification(this, userId, true);
+                Replications.HoldReplicationDataUntilOnReplicationNotification(this, userId, true);
             }
             if (_movementUpdated)
             {
-                _game.PacketNotifier.HoldMovementDataUntilWaypointGroupNotification(this, userId, _teleportedDuringThisFrame);
+                Replications.HoldMovementDataUntilWaypointGroupNotification(this, userId, _teleportedDuringThisFrame);
             }
         }
 
